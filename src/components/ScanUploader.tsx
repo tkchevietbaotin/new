@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   UploadCloud,
   Camera,
@@ -8,6 +8,9 @@ import {
   Sparkles,
   RefreshCw,
   Zap,
+  SwitchCamera,
+  AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
 import { analyzeImage } from '@/lib/ai-service';
 import { ScanResult } from '@/types';
@@ -62,19 +65,52 @@ export default function ScanUploader({
   const [dragActive, setDragActive] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('Đang khởi tạo AI Engine...');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Callback ref for video element to guarantee stream is attached immediately when mounted
+  const setVideoRef = useCallback((element: HTMLVideoElement | null) => {
+    videoRef.current = element;
+    if (element && streamRef.current) {
+      element.srcObject = streamRef.current;
+      element
+        .play()
+        .catch((err) => console.warn('Video playback notice:', err));
+    }
+  }, []);
+
+  // Stop camera helper
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  }, []);
+
+  // Cleanup stream on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   const startAnalysis = async (base64Img: string, fileName?: string) => {
     setIsScanning(true);
     setSelectedPreview(base64Img);
 
-    // Dynamic scanning step messages for immersive UX
     setStatusMessage('Đang phân tích phổ quang và hình thái vật thể...');
     const t1 = setTimeout(() => {
       setStatusMessage('Đang đối chiếu chất liệu phân tử & khả năng phân hủy...');
@@ -129,42 +165,94 @@ export default function ScanUploader({
     }
   };
 
-  const startCamera = async () => {
+  // Robust cross-platform camera starter (Mac, iPhone, Android, Windows)
+  const startCamera = async (preferredFacing: 'environment' | 'user' = cameraFacing) => {
     setCameraError(null);
+
+    // Stop existing stream if any
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Trình duyệt hiện tại không hỗ trợ Web Camera trực tiếp. Hãy chọn "Chụp ảnh từ thiết bị" hoặc "Tải ảnh từ máy".');
+      return;
+    }
+
+    let stream: MediaStream | null = null;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      // 1. First attempt: with requested facingMode (ideal, not exact, to avoid OverconstrainedError)
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: preferredFacing },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
       });
+    } catch (err1: any) {
+      console.warn('Attempt with facingMode failed, falling back to default camera:', err1);
+      try {
+        // 2. Second attempt: simple fallback for laptops/Macs without back camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      } catch (err2: any) {
+        console.error('Camera access failed completely:', err2);
+        if (err2.name === 'NotAllowedError' || err2.name === 'PermissionDeniedError') {
+          setCameraError('Quyền truy cập Camera đã bị từ chối. Vui lòng bấm vào biểu tượng ổ khóa hoặc camera trên thanh địa chỉ trình duyệt để cấp quyền.');
+        } else if (err2.name === 'NotFoundError' || err2.name === 'DevicesNotFoundError') {
+          setCameraError('Không tìm thấy thiết bị Camera trên máy này.');
+        } else {
+          setCameraError(`Không thể mở Camera (${err2.message || 'Lỗi không xác định'}). Bạn có thể dùng tính năng "Chụp ảnh từ thiết bị" hoặc tải ảnh lên.`);
+        }
+        return;
+      }
+    }
+
+    if (stream) {
       streamRef.current = stream;
+      setCameraActive(true);
+
+      // If video element is already mounted, attach immediately
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.play().catch((err) => console.warn(err));
       }
-      setCameraActive(true);
-    } catch (err: any) {
-      console.error(err);
-      setCameraError('Không thể mở camera. Vui lòng cấp quyền truy cập hoặc sử dụng tính năng tải ảnh.');
     }
   };
 
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setCameraActive(false);
-  }, []);
+  // Toggle front/back camera
+  const toggleCameraFacing = async () => {
+    const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+    setCameraFacing(nextFacing);
+    await startCamera(nextFacing);
+  };
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
+
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+
+      canvas.width = width;
+      canvas.height = height;
+
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        // Mirror if user-facing camera
+        if (cameraFacing === 'user') {
+          ctx.translate(width, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(video, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         stopCamera();
         startAnalysis(dataUrl, 'camera_capture.jpg');
       }
@@ -175,7 +263,6 @@ export default function ScanUploader({
     setIsScanning(true);
     setSelectedPreview(sample.url);
     try {
-      // Convert external image to base64 if needed or send direct url
       const res = await fetch(sample.url);
       const blob = await res.blob();
       const reader = new FileReader();
@@ -205,6 +292,7 @@ export default function ScanUploader({
             : 'border-slate-300 bg-white hover:border-emerald-400 hover:bg-emerald-50/30'
         } ${isScanning ? 'pointer-events-none' : ''}`}
       >
+        {/* Hidden inputs */}
         <input
           ref={fileInputRef}
           type="file"
@@ -212,40 +300,74 @@ export default function ScanUploader({
           className="hidden"
           onChange={handleFileChange}
         />
+        {/* Native mobile camera fallback input (works on all smartphones without permission prompt) */}
+        <input
+          ref={nativeCameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileChange}
+        />
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Live Camera View */}
         {cameraActive ? (
-          <div className="relative max-w-lg mx-auto overflow-hidden rounded-2xl bg-black shadow-lg">
+          <div className="relative max-w-lg mx-auto overflow-hidden rounded-3xl bg-black shadow-2xl border-4 border-emerald-500/50">
             <video
-              ref={videoRef}
+              ref={setVideoRef}
               playsInline
+              autoPlay
               muted
-              className="w-full h-72 sm:h-80 object-cover"
+              className={`w-full h-72 sm:h-80 object-cover ${
+                cameraFacing === 'user' ? 'scale-x-[-1]' : ''
+              }`}
             />
-            {/* Target Reticle */}
+
+            {/* Target Reticle Overlay */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-emerald-400/80 rounded-2xl border-dashed animate-pulse flex items-center justify-center">
-                <span className="text-[11px] text-white bg-black/60 px-2.5 py-1 rounded-full font-medium">
-                  Đặt vật phẩm vào đây
+              <div className="w-52 h-52 sm:w-60 sm:h-60 border-2 border-emerald-400 rounded-3xl border-dashed animate-pulse flex flex-col items-center justify-between p-3">
+                <span className="text-[10px] text-white bg-black/60 px-2.5 py-0.5 rounded-full font-bold backdrop-blur-md">
+                  Căn giữa vật phẩm vào khung
+                </span>
+                <span className="text-[10px] text-emerald-300 bg-emerald-950/70 px-2.5 py-0.5 rounded-full font-bold">
+                  Camera Đang Hoạt Động
                 </span>
               </div>
             </div>
 
-            <div className="absolute bottom-4 inset-x-0 flex items-center justify-center gap-4 px-4">
+            {/* Top Toolbar: Switch Camera & Close */}
+            <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10">
+              <button
+                type="button"
+                onClick={toggleCameraFacing}
+                title="Đổi camera trước/sau"
+                className="p-2 rounded-xl bg-black/50 hover:bg-black/70 text-white backdrop-blur-md transition-all flex items-center gap-1.5 text-xs font-semibold"
+              >
+                <SwitchCamera className="w-4 h-4 text-emerald-400" />
+                <span className="hidden sm:inline">
+                  {cameraFacing === 'environment' ? 'Camera Sau' : 'Camera Trước'}
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={stopCamera}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-white/80 hover:bg-white text-slate-800 backdrop-blur-xs transition-all"
+                className="px-3 py-1.5 rounded-xl bg-black/50 hover:bg-black/70 text-white backdrop-blur-md text-xs font-semibold transition-all"
               >
-                Hủy bỏ
+                Đóng
               </button>
+            </div>
+
+            {/* Bottom Toolbar: Capture Photo */}
+            <div className="absolute bottom-4 inset-x-0 flex items-center justify-center gap-4 px-4 z-10">
               <button
                 type="button"
                 onClick={capturePhoto}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/40 flex items-center gap-2 transition-all transform active:scale-95"
+                className="px-6 py-3 rounded-2xl text-sm font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-xl shadow-emerald-500/50 flex items-center gap-2 transition-all transform active:scale-95"
               >
-                <Camera className="w-4 h-4" /> Chụp & Quét AI
+                <Camera className="w-5 h-5 text-slate-950" />
+                <span>Chụp & Quét AI Ngay</span>
               </button>
             </div>
           </div>
@@ -295,6 +417,25 @@ export default function ScanUploader({
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              {/* Button 1: Live Webcam Stream */}
+              <button
+                type="button"
+                onClick={() => startCamera('environment')}
+                className="px-5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all transform active:scale-95"
+              >
+                <Camera className="w-4 h-4 text-emerald-400" /> Bật Camera trực tiếp
+              </button>
+
+              {/* Button 2: Native Camera Trigger (Mobile capture/Snapshot) */}
+              <button
+                type="button"
+                onClick={() => nativeCameraInputRef.current?.click()}
+                className="px-5 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all transform active:scale-95 sm:hidden"
+              >
+                <Camera className="w-4 h-4" /> Chụp ảnh nhanh
+              </button>
+
+              {/* Button 3: Choose file from computer */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -302,17 +443,34 @@ export default function ScanUploader({
               >
                 <ImageIcon className="w-4 h-4" /> Chọn ảnh từ máy
               </button>
-              <button
-                type="button"
-                onClick={startCamera}
-                className="px-5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all transform active:scale-95"
-              >
-                <Camera className="w-4 h-4 text-emerald-400" /> Bật Camera trực tiếp
-              </button>
             </div>
 
+            {/* Error Display with Helpful Advice */}
             {cameraError && (
-              <p className="text-xs text-rose-500 font-medium pt-2">{cameraError}</p>
+              <div className="max-w-md mx-auto p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs text-left space-y-1.5 animate-in fade-in duration-150">
+                <div className="flex items-center gap-2 font-bold">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>Thông báo Camera:</span>
+                </div>
+                <p className="leading-relaxed">{cameraError}</p>
+                <div className="pt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => nativeCameraInputRef.current?.click()}
+                    className="underline font-bold hover:text-rose-900"
+                  >
+                    → Chụp ảnh qua ứng dụng máy ảnh thiết bị
+                  </button>
+                  <span className="text-slate-300">|</span>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="underline font-bold hover:text-rose-900"
+                  >
+                    → Chọn ảnh từ thư viện
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
