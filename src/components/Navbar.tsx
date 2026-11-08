@@ -20,6 +20,7 @@ import {
   Bot,
   MapPin,
   AlertTriangle,
+  Database,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -36,6 +37,7 @@ export default function Navbar() {
   const navLinks = [
     { href: '/', label: 'Trang chủ', icon: Leaf },
     { href: '/scan', label: 'Quét AI', icon: Scan, highlight: true },
+    { href: '/dataset', label: 'Kho Dataset', icon: Database },
     { href: '/chatbot', label: 'EcoBot', icon: Bot },
     { href: '/map', label: 'Bản đồ số', icon: MapPin },
     { href: '/alerts', label: 'Cảnh báo', icon: AlertTriangle, badge: activeAlertsCount },
@@ -72,7 +74,7 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden xl:flex items-center gap-1">
+            <nav className="hidden 2xl:flex items-center gap-1">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = pathname === link.href;
@@ -101,6 +103,35 @@ export default function Navbar() {
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
                       </span>
                     )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Compact Desktop Navigation for standard laptops */}
+            <nav className="hidden xl:flex 2xl:hidden items-center gap-1">
+              {navLinks.slice(0, 6).map((link) => {
+                const Icon = link.icon;
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all relative ${
+                      link.highlight
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold'
+                        : isActive
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold'
+                        : 'text-slate-600 hover:text-emerald-700'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{link.label}</span>
+                    {link.badge ? (
+                      <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-black">
+                        {link.badge}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}

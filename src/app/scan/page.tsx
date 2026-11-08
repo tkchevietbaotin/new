@@ -1,18 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEcoStore } from '@/lib/store';
 import ScanUploader from '@/components/ScanUploader';
 import ScanResultCard from '@/components/ScanResultCard';
 import CreatePostModal from '@/components/CreatePostModal';
 import { ScanResult } from '@/types';
+import { analyzeImage } from '@/lib/ai-service';
 import {
   Sparkles,
   History,
   Layers,
   ChevronRight,
   TrendingDown,
+  Database,
+  ArrowRight,
 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ScanPage() {
   const { scans, addScanResult, geminiApiKey } = useEcoStore();
@@ -20,6 +24,31 @@ export default function ScanPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [itemToShare, setItemToShare] = useState<ScanResult | null>(null);
+
+  // Auto-scan if user clicked a sample from /dataset page
+  useEffect(() => {
+    try {
+      const storedSample = localStorage.getItem('ecoscan_direct_sample');
+      if (storedSample) {
+        localStorage.removeItem('ecoscan_direct_sample');
+        const parsed = JSON.parse(storedSample);
+        if (parsed.url) {
+          setIsScanning(true);
+          analyzeImage({
+            imageBase64: parsed.url,
+            fileName: parsed.fileName,
+            apiKey: geminiApiKey,
+          }).then((res) => {
+            const saved = addScanResult(res);
+            setCurrentResult(saved);
+            setIsScanning(false);
+          });
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [geminiApiKey, addScanResult]);
 
   const handleScanComplete = (result: ScanResult) => {
     // Add to global store & award points
@@ -45,7 +74,7 @@ export default function ScanPage() {
             </span>
           ) : (
             <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
-              Smart Simulator
+              Dataset Catalog AI
             </span>
           )}
         </div>
@@ -55,6 +84,18 @@ export default function ScanPage() {
         <p className="text-sm text-slate-500 max-w-lg mx-auto">
           Tải ảnh lên hoặc chụp từ camera. AI sẽ nhận diện chất liệu, đo lường tác động môi trường và hướng dẫn tái chế chi tiết.
         </p>
+
+        {/* Link to Dataset Explorer */}
+        <div className="pt-1">
+          <Link
+            href="/dataset"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-xs font-bold transition-all shadow-xs"
+          >
+            <Database className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Khám phá Kho Dataset 12.000+ Mẫu Rác Thực Tế</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
       </div>
 
       {/* Main Scanner or Result Card */}

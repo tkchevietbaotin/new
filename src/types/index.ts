@@ -6,6 +6,10 @@ export type WasteCategory =
   | 'organic'
   | 'electronic'
   | 'hazardous'
+  | 'cardboard'
+  | 'clothes'
+  | 'shoes'
+  | 'trash'
   | 'other';
 
 export type RecyclabilityLevel = 'high' | 'medium' | 'low' | 'non-recyclable';
@@ -196,4 +200,23 @@ export interface GreenEvent {
   rewardPoints: number;
   imageUrl: string;
   isJoined: boolean;
+}
+
+// Dataset Archive Explorer types
+export interface DatasetCategoryInfo {
+  key: string;
+  nameVi: string;
+  icon: string;
+  count256: number;
+  count384: number;
+  description: string;
+  color: string;
+  sampleFiles: string[];
+}
+
+export interface DatasetStats {
+  totalImages: number;
+  categoriesCount: number;
+  resolution: string;
+  categories: DatasetCategoryInfo[];
 }
