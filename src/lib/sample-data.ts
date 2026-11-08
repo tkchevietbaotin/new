@@ -1,4 +1,15 @@
-import { User, ScanResult, Post, Challenge, Badge } from '@/types';
+import {
+  User,
+  ScanResult,
+  Post,
+  Challenge,
+  Badge,
+  ChatMessage,
+  EcoLocation,
+  EcoAlert,
+  MarketplaceItem,
+  GreenEvent,
+} from '@/types';
 
 export const INITIAL_BADGES: Badge[] = [
   {
@@ -119,17 +130,17 @@ export const SAMPLE_USERS: User[] = [
 export const INITIAL_SCANS: ScanResult[] = [
   {
     id: 'scan-1',
-    itemName: 'Chai nước khoáng nhựa rỗng',
+    itemName: 'Chai nước khoáng nhựa rỗng (PET #1)',
     category: 'plastic',
     categoryNameVi: 'Rác nhựa (Plastic #1 - PET)',
     materialType: 'Polyethylene Terephthalate (PETE)',
     recyclability: 'high',
-    ecoScore: 55,
+    ecoScore: 58,
     co2SavedKg: 0.08,
     decompositionTime: 'Khoảng 450 năm trong môi trường tự nhiên',
     disposalGuide: [
       'Đổ hết chất lỏng còn sót lại bên trong chai',
-      'Tháo nắp nhựa (thường làm từ nhựa PP) và bóc màng co nilông nhãn mác',
+      'Tháo nắp nhựa (nhựa PP) và bóc màng co nilông nhãn mác',
       'Dẫm bẹp thân chai để tiết kiệm thể tích thùng rác',
       'Bỏ vào thùng rác tái chế màu vàng/xanh biển'
     ],
@@ -141,6 +152,16 @@ export const INITIAL_SCANS: ScanResult[] = [
     confidence: 0.96,
     imageUrl: 'https://images.unsplash.com/photo-1559825481-12a05cc00344?auto=format&fit=crop&w=600&q=80',
     timestamp: 'Hôm nay, 08:30',
+    boundingBoxes: [
+      { label: 'Thân chai PET', confidence: 0.98, box: [15, 25, 50, 70], color: '#10b981' },
+      { label: 'Nắp nhựa PP #5', confidence: 0.94, box: [10, 42, 16, 12], color: '#3b82f6' },
+      { label: 'Nhãn màng nilông', confidence: 0.91, box: [38, 25, 50, 22], color: '#f59e0b' }
+    ],
+    materialBreakdowns: [
+      { name: 'Nhựa thân chai PET #1', percentage: 82, recyclable: true, color: '#10b981' },
+      { name: 'Nắp chai PP #5', percentage: 12, recyclable: true, color: '#3b82f6' },
+      { name: 'Màng nhãn LDPE', percentage: 6, recyclable: false, color: '#f59e0b' }
+    ]
   },
   {
     id: 'scan-2',
@@ -149,7 +170,7 @@ export const INITIAL_SCANS: ScanResult[] = [
     categoryNameVi: 'Kim loại tái chế (Nhôm - Aluminum)',
     materialType: 'Hợp kim nhôm tái sinh 100%',
     recyclability: 'high',
-    ecoScore: 92,
+    ecoScore: 94,
     co2SavedKg: 0.22,
     decompositionTime: '80 - 200 năm nếu bị chôn lấp',
     disposalGuide: [
@@ -159,57 +180,41 @@ export const INITIAL_SCANS: ScanResult[] = [
     ],
     upcyclingTips: [
       'Làm ống cắm bút trang trí bàn làm việc phong cách Retro Industrial',
-      'Làm khuôn đựng sáp nến thơm thơm phòng handmade'
+      'Làm khuôn đựng sáp nến thơm handmade'
     ],
     confidence: 0.98,
     imageUrl: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80',
     timestamp: 'Hôm qua, 15:45',
+    boundingBoxes: [
+      { label: 'Lon nhôm 330ml', confidence: 0.99, box: [20, 30, 40, 60], color: '#10b981' }
+    ],
+    materialBreakdowns: [
+      { name: 'Hợp kim nhôm tái sinh', percentage: 98, recyclable: true, color: '#10b981' },
+      { name: 'Mực in bề mặt', percentage: 2, recyclable: false, color: '#94a3b8' }
+    ]
   },
   {
     id: 'scan-3',
-    itemName: 'Ly cà phê take-away có tráng màng PE',
+    itemName: 'Hộp sữa tươi Tetra Pak',
     category: 'paper',
-    categoryNameVi: 'Giấy hỗn hợp (Poly-coated Paper)',
-    materialType: 'Bột giấy nguyên sinh kết hợp màng tráng chống thấm PE',
-    recyclability: 'low',
-    ecoScore: 35,
-    co2SavedKg: 0.03,
-    decompositionTime: '20 - 30 năm (lớp màng nhựa cực khó tách rời)',
+    categoryNameVi: 'Giấy phức hợp (Aseptic Carton)',
+    materialType: '75% giấy bìa cứng, 20% màng PE, 5% nhôm siêu mỏng',
+    recyclability: 'medium',
+    ecoScore: 68,
+    co2SavedKg: 0.12,
+    decompositionTime: '5 - 10 năm nếu chôn lấp',
     disposalGuide: [
-      'Tách nắp nhựa trong suốt (nhựa #5 hoặc #6) phân loại riêng',
-      'Tháo rời vỏ bọc chống nóng bằng bìa carton nâu (loại này tái chế 100% được)',
-      'Thân cốc do tráng nhựa PE mỏng nên các nhà máy thông thường không tái chế được, bỏ vào rác vô cơ/thông thường'
+      'Mở 4 góc tai hộp và dẫm phẳng hoàn toàn',
+      'Tráng sạch cặn sữa bên trong và phơi khô ráo',
+      'Gửi đến các điểm thu gom vỏ hộp sữa của Tetra Pak hoặc siêu thị'
     ],
     upcyclingTips: [
-      'Khuyến khích mang ly cá nhân (Tumbler/Thermos) để được giảm 5-10k khi mua cà phê!',
-      'Có thể dùng cốc tạm thời làm khay ươm cây con trước khi chuyển ra đất'
+      'Khay ươm cây mầm gia đình chống thấm nước tuyệt vời',
+      'Gấp làm ví đựng thẻ mini handmade bền bỉ'
     ],
-    confidence: 0.93,
+    confidence: 0.95,
     imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80',
     timestamp: '06/11/2026',
-  },
-  {
-    id: 'scan-4',
-    itemName: 'Bã cà phê & Vỏ chuối nhà bếp',
-    category: 'organic',
-    categoryNameVi: 'Rác hữu cơ sinh hoạt (Organic)',
-    materialType: 'Chất thải sinh khối giàu Nitơ & Kali tự nhiên',
-    recyclability: 'high',
-    ecoScore: 95,
-    co2SavedKg: 0.35,
-    decompositionTime: '2 - 4 tuần trong điều kiện ủ compost',
-    disposalGuide: [
-      'Không lẫn túi nilon hay tăm nhọn',
-      'Cho vào xô ủ rác hữu cơ gia đình hoặc thùng rác hữu cơ màu xanh lá'
-    ],
-    upcyclingTips: [
-      'Trộn bã cà phê vào đất trồng hoa hồng giúp xua đuổi ốc sên và tạo độ xốp',
-      'Ngâm vỏ chuối vào nước 48 tiếng tạo phân bón lá Kali tuyệt vời cho cây cảnh',
-      'Bã cà phê phơi khô làm túi hút ẩm, khử mùi tủ lạnh cực kỳ hiệu quả'
-    ],
-    confidence: 0.99,
-    imageUrl: 'https://images.unsplash.com/photo-1587734195503-904fca47e0e9?auto=format&fit=crop&w=600&q=80',
-    timestamp: '05/11/2026',
   }
 ];
 
@@ -238,17 +243,6 @@ export const INITIAL_POSTS: Post[] = [
         },
         content: 'Tuyệt vời quá Lan ơi! Nhôm tái chế tiết kiệm tới 95% năng lượng so với luyện nhôm mới từ quặng bauxite đấy!',
         createdAt: '2 giờ trước',
-      },
-      {
-        id: 'c-2',
-        author: {
-          id: 'usr-current',
-          name: 'Bảo Tín',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
-          rankTitle: 'Chiến Binh Sinh Thái',
-        },
-        content: 'Một hành động nhỏ nhưng mang lại ý nghĩa lớn! Mình cũng vừa scan xong mấy chai nhựa nè.',
-        createdAt: '45 phút trước',
       }
     ],
     createdAt: '3 giờ trước',
@@ -263,39 +257,11 @@ export const INITIAL_POSTS: Post[] = [
     },
     content: 'Khoe với mọi người thành quả sau khi đọc gợi ý Upcycling từ app EcoScan: Những chiếc chậu cây treo siêu xinh được làm từ chai nước khoáng PET 1.5L cũ. Vừa xanh nhà lại chẳng tốn một xu mua chậu nhựa mới! 🪴✨',
     imageUrl: 'https://images.unsplash.com/photo-1559825481-12a05cc00344?auto=format&fit=crop&w=800&q=80',
-    scanItemName: 'Chai nước khoáng nhựa rỗng',
+    scanItemName: 'Chai nước khoáng nhựa rỗng (PET #1)',
     tags: ['#DIYUpcycling', '#TaiCheSangTao', '#ChauCayTaiChe'],
     likes: ['usr-current', 'usr-2'],
-    comments: [
-      {
-        id: 'c-3',
-        author: {
-          id: 'usr-5',
-          name: 'Đức Trí Eco',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=250&q=80',
-          rankTitle: 'Mầm Xanh Tiên Phong',
-        },
-        content: 'Khéo tay quá bạn ơi! Cắt có cần hơ lửa viền cho đỡ bén không ạ?',
-        createdAt: '1 giờ trước',
-      }
-    ],
-    createdAt: '5 giờ trước',
-  },
-  {
-    id: 'post-3',
-    author: {
-      id: 'usr-current',
-      name: 'Bảo Tín',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
-      rankTitle: 'Chiến Binh Sinh Thái',
-    },
-    content: 'Mẹo nhỏ cho ai thích uống cà phê: Đừng vứt bã cà phê đi nhé! Mình phơi khô bã cà phê để trong tủ lạnh, mùi thức ăn biến mất sạch sẽ sau 1 đêm luôn. Rác hữu cơ chính là tài nguyên nếu biết tận dụng đúng cách ☕🌱',
-    imageUrl: 'https://images.unsplash.com/photo-1587734195503-904fca47e0e9?auto=format&fit=crop&w=800&q=80',
-    scanItemName: 'Bã cà phê & Vỏ chuối nhà bếp',
-    tags: ['#MeoNhaBep', '#CompostTaiNha', '#KhuMuiTuNhien'],
-    likes: ['usr-2', 'usr-3', 'usr-4', 'usr-5'],
     comments: [],
-    createdAt: 'Hôm qua',
+    createdAt: '5 giờ trước',
   }
 ];
 
@@ -335,17 +301,231 @@ export const INITIAL_CHALLENGES: Challenge[] = [
     completed: false,
     icon: '🍎',
     expiresIn: 'Còn 4 ngày',
+  }
+];
+
+// EcoBot Chat initial history
+export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
+  {
+    id: 'msg-welcome',
+    sender: 'bot',
+    text: 'Xin chào! Tôi là **EcoBot AI** 🤖🌱 - Trợ lý cố vấn sinh thái thông minh của bạn.\n\nTôi có thể giúp bạn giải đáp mọi thắc mắc về phân loại rác thải, kiểm tra khả năng tái chế, hướng dẫn ủ phân hữu cơ (compost), gợi ý ý tưởng DIY hoặc tìm điểm thu gom gần bạn nhất. Hãy hỏi tôi bất cứ điều gì nhé!',
+    timestamp: 'Vừa xong',
+    suggestions: [
+      'Pin cũ vứt ở đâu an toàn?',
+      'Cách phân biệt các loại nhựa #1 đến #7?',
+      'Làm sao khử mùi thùng rác hữu cơ tại nhà?',
+      'Gợi ý tái chế chai thủy tinh cũ'
+    ]
+  }
+];
+
+// Digital Eco Map Locations across Vietnam
+export const INITIAL_LOCATIONS: EcoLocation[] = [
+  {
+    id: 'loc-1',
+    name: 'Điểm Thu Gom Pin Cũ & Rác Điện Tử - Circle K Hoàn Kiếm',
+    category: 'battery_ewaste',
+    categoryNameVi: 'Thu gom Pin & Rác Điện Tử',
+    address: 'Số 18 Hàng Bài, Phường Tràng Tiền, Quận Hoàn Kiếm',
+    city: 'Hà Nội',
+    distanceKm: 0.8,
+    coordinates: { lat: 21.0254, lng: 105.8525 },
+    acceptedMaterials: ['Pin AA/AAA', 'Pin điện thoại Lithium-ion', 'Sạc hỏng', 'Cáp dây điện cũ'],
+    openingHours: '24/7 (Cả tuần)',
+    phone: '024 3939 1234',
+    verified: true,
+    rewardPointsBonus: 50,
   },
   {
-    id: 'ch-4',
-    title: 'Dũng sĩ Không Ly Nhựa Dùng 1 Lần',
-    description: 'Dùng bình nước cá nhân khi mua đồ uống suốt 5 ngày liên tục.',
-    rewardPoints: 200,
-    category: 'Thói quen xanh',
-    progress: 4,
-    maxProgress: 5,
-    completed: false,
-    icon: '🥤',
-    expiresIn: 'Còn 2 ngày',
+    id: 'loc-2',
+    name: 'Trạm Thu Hồi Vỏ Hộp Sữa Giấy Tetra Pak - Co.opmart Cống Quỳnh',
+    category: 'recycling_center',
+    categoryNameVi: 'Trạm Thu Gom Phế Liệu & Giấy',
+    address: '189C Cống Quỳnh, Phường Nguyễn Cư Trinh, Quận 1',
+    city: 'TP. Hồ Chí Minh',
+    distanceKm: 1.2,
+    coordinates: { lat: 10.7672, lng: 106.6876 },
+    acceptedMaterials: ['Vỏ hộp sữa giấy', 'Bìa carton sạch', 'Chai nhựa PET', 'Vỏ lon nhôm'],
+    openingHours: '08:00 - 22:00 hàng ngày',
+    phone: '028 3832 5283',
+    verified: true,
+    rewardPointsBonus: 40,
+  },
+  {
+    id: 'loc-3',
+    name: 'Lại Đây Refill Station - Trạm Làm Đầy Sống Xanh',
+    category: 'refill_station',
+    categoryNameVi: 'Trạm Refill Không Rác Thải',
+    address: 'Số 83 Đường số 4, Thảo Điền, Quận 2 (TP. Thủ Đức)',
+    city: 'TP. Hồ Chí Minh',
+    distanceKm: 3.5,
+    coordinates: { lat: 10.8034, lng: 106.7324 },
+    acceptedMaterials: ['Mang chai lọ sạch đến để mua dầu gội, nước rửa chén, xà phòng tự nhiên'],
+    openingHours: '09:00 - 19:30 (Thứ 3 - Chủ Nhật)',
+    phone: '090 912 3456',
+    verified: true,
+    rewardPointsBonus: 80,
+  },
+  {
+    id: 'loc-4',
+    name: 'Trung Tâm Tái Sinh & Trao Đổi Đồ Điện Tử GreenHub',
+    category: 'battery_ewaste',
+    categoryNameVi: 'Thu gom Pin & Rác Điện Tử',
+    address: 'Tầng 1, Nhà C1 ĐH Bách Khoa, Số 1 Đại Cồ Việt, Hai Bà Trưng',
+    city: 'Hà Nội',
+    distanceKm: 2.1,
+    coordinates: { lat: 21.0051, lng: 105.8436 },
+    acceptedMaterials: ['Máy tính bảng, laptop cũ', 'Bàn phím, chuột', 'Màn hình hỏng', 'Bo mạch điện tử'],
+    openingHours: '08:30 - 17:30 (Thứ 2 - Thứ 6)',
+    phone: '024 3869 2008',
+    verified: true,
+    rewardPointsBonus: 100,
+  },
+  {
+    id: 'loc-5',
+    name: 'Điểm Phân Loại Rác Thông Minh Công Viên Cầu Giấy',
+    category: 'public_bin',
+    categoryNameVi: 'Thùng Rác Phân Loại Thông Minh',
+    address: 'Đường Thành Thái, Dịch Vọng, Quận Cầu Giấy',
+    city: 'Hà Nội',
+    distanceKm: 4.0,
+    coordinates: { lat: 21.0289, lng: 105.7903 },
+    acceptedMaterials: ['Thùng xanh: Rác hữu cơ', 'Thùng vàng: Rác tái chế', 'Thùng đỏ: Rác nguy hại'],
+    openingHours: '24/7 Công viên mở cửa',
+    phone: '1900 6868',
+    verified: true,
+    rewardPointsBonus: 20,
+  },
+  {
+    id: 'loc-6',
+    name: 'Điểm Thu Nhận Phế Liệu Tái Chế Đà Nẵng Xanh',
+    category: 'recycling_center',
+    categoryNameVi: 'Trạm Thu Gom Phế Liệu & Giấy',
+    address: '120 Bạch Đằng, Quận Hải Châu',
+    city: 'Đà Nẵng',
+    distanceKm: 1.5,
+    coordinates: { lat: 16.0678, lng: 108.2208 },
+    acceptedMaterials: ['Kim loại', 'Chai lọ thủy tinh', 'Giấy vụn sách báo', 'Nhựa các loại'],
+    openingHours: '07:30 - 18:00',
+    phone: '0236 382 1234',
+    verified: true,
+    rewardPointsBonus: 40,
+  }
+];
+
+// Environmental Alerts & Hotspots
+export const INITIAL_ALERTS: EcoAlert[] = [
+  {
+    id: 'alt-1',
+    title: 'Cảnh báo Chất Lượng Không Khí (AQI): Mức Kém tại Hà Nội',
+    description: 'Chỉ số bụi mịn PM2.5 vượt ngưỡng 158 AQI tại khu vực Cầu Giấy và Hoàn Kiếm do nghịch nhiệt và sương mù ô nhiễm. Khuyến cáo đeo khẩu trang chống bụi N95 khi di chuyển ngoài trời và hạn chế đốt rác nông nghiệp.',
+    type: 'aqi_warning',
+    severity: 'warning',
+    status: 'active',
+    location: 'Hà Nội (Khu vực nội thành)',
+    reportedBy: 'Hệ thống Cảm biến Môi trường EcoSense',
+    reportedAt: '1 giờ trước',
+    upvotes: 42,
+    volunteersJoined: 0,
+  },
+  {
+    id: 'alt-2',
+    title: 'Điểm nóng ô nhiễm: Bãi rác tự phát ngập bao bì nhựa ven kênh Nhiêu Lộc',
+    description: 'Phát hiện bãi xả rác thải sinh hoạt và bao bì nilon trái phép dài khoảng 25m gần chân cầu số 6. Cần 10 - 15 tình nguyện viên tham gia chiến dịch làm sạch cuối tuần này.',
+    type: 'waste_hotspot',
+    severity: 'critical',
+    status: 'active',
+    location: 'Đoạn bờ kênh Nhiêu Lộc - Thị Nghè, Quận 3, TP.HCM',
+    reportedBy: 'Hoàng Long Green',
+    reportedAt: '3 giờ trước',
+    imageUrl: 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?auto=format&fit=crop&w=800&q=80',
+    upvotes: 89,
+    volunteersJoined: 12,
+  },
+  {
+    id: 'alt-3',
+    title: 'Chiến dịch xanh: Ra quân dọn sạch rác bờ kè Hồ Tây',
+    description: 'Chiến dịch định kỳ nhặt rác nhựa, chai thủy tinh và tàn thuốc lá ven hồ Tây. Ban tổ chức chuẩn bị găng tay y tế, kẹp gắp rác và túi đựng sinh học tự hủy.',
+    type: 'clean_campaign',
+    severity: 'info',
+    status: 'in_progress',
+    location: 'Bến thuyền hồ Tây, Phố Nhật Chiêu, Tây Hồ, Hà Nội',
+    reportedBy: 'Nhóm Tình Nguyện Hanoi Zero-Waste',
+    reportedAt: 'Hôm qua',
+    imageUrl: 'https://images.unsplash.com/photo-1595278069441-2cf29f8005a4?auto=format&fit=crop&w=800&q=80',
+    upvotes: 135,
+    volunteersJoined: 28,
+  }
+];
+
+// Community Marketplace Items (Chợ Xanh 0 Đồng)
+export const INITIAL_MARKETPLACE: MarketplaceItem[] = [
+  {
+    id: 'item-1',
+    title: 'Tặng 10 hũ thủy tinh sạch đựng thực phẩm / gia vị',
+    description: 'Mình vừa ăn hết pate và sốt cà chua, đã luộc khử trùng sạch sẽ và bóc sạch nhãn. Ai làm nến thơm hay đựng gia vị qua lấy miễn phí nhé!',
+    category: 'Chai lọ & Hộp',
+    condition: 'Như mới (95%)',
+    owner: {
+      id: 'usr-2',
+      name: 'Mai Lan (Zero-Waste)',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=250&q=80',
+    },
+    imageUrl: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?auto=format&fit=crop&w=600&q=80',
+    location: 'Quận 1, TP.HCM',
+    isFree: true,
+    status: 'available',
+    createdAt: 'Hôm nay',
+  },
+  {
+    id: 'item-2',
+    title: 'Bộ chậu sen đá làm từ chai nhựa PET tái chế',
+    description: 'Tự tay mình cắt dán và sơn màu acrylic sinh học. Đổi lấy 50 Green Points hoặc tặng bạn nào thích trồng cây xanh góc bàn.',
+    category: 'Cây cảnh & Tái chế',
+    condition: 'Mới 100%',
+    owner: {
+      id: 'usr-4',
+      name: 'Phương Linh Art',
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=250&q=80',
+    },
+    imageUrl: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=600&q=80',
+    location: 'Quận Đống Đa, Hà Nội',
+    isFree: false,
+    greenPointsPrice: 50,
+    status: 'available',
+    createdAt: 'Hôm qua',
+  }
+];
+
+// Green Events
+export const INITIAL_EVENTS: GreenEvent[] = [
+  {
+    id: 'evt-1',
+    title: 'Ngày hội "Đổi Pin Cũ Lấy Cây Sen Đá & Túi Vải Canvas"',
+    description: 'Cứ 10 viên pin đã qua sử dụng bất kỳ sẽ được đổi lấy 1 chậu sen đá mini hoặc 1 túi vải canvas dệt từ sợi bông hữu cơ. Toàn bộ pin thu gom sẽ chuyển giao trực tiếp cho nhà máy xử lý chất thải nguy hại.',
+    date: 'Thứ Bảy, 14/11/2026',
+    time: '08:30 - 16:30',
+    location: 'Sân Nhà Thiếu Nhi TP.HCM, Số 169 Nam Kỳ Khởi Nghĩa, Quận 3',
+    organizer: 'Mạng Lưới Hành Tinh Xanh Việt Nam',
+    participantsCount: 142,
+    maxParticipants: 200,
+    rewardPoints: 100,
+    imageUrl: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80',
+    isJoined: true,
+  },
+  {
+    id: 'evt-2',
+    title: 'Workshop Trực Tiếp: Nghệ Thuật Ủ Phân Hữu Cơ Bokashi Tại Căn Hộ Chung Cư',
+    description: 'Học cách biến 100% rác nhà bếp (vỏ trái cây, rau úa, bã trà) thành men vi sinh không mùi hôi chỉ trong thùng 10 lít đặt tại góc bếp hoặc ban công nhỏ.',
+    date: 'Chủ Nhật, 15/11/2026',
+    time: '09:00 - 11:30',
+    location: 'Phòng Hội Thảo EcoHub, Tầng 3 Tòa Nhà Green Tower, Cầu Giấy, Hà Nội',
+    organizer: 'Chuyên Gia Môi Trường Hoàng Long',
+    participantsCount: 45,
+    maxParticipants: 50,
+    rewardPoints: 80,
+    imageUrl: 'https://images.unsplash.com/photo-1587734195503-904fca47e0e9?auto=format&fit=crop&w=800&q=80',
+    isJoined: false,
   }
 ];

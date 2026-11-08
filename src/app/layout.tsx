@@ -3,11 +3,12 @@ import './globals.css';
 import { EcoStoreProvider } from '@/lib/store';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import EcoBotWidget from '@/components/EcoBotWidget';
 
 export const metadata: Metadata = {
-  title: 'EcoScan AI - Phân loại rác & Mạng xã hội sống xanh',
-  description: 'Trí tuệ nhân tạo quét phân loại rác thải, đánh giá khả năng tái chế, tích lũy điểm thưởng và kết nối cộng đồng hành động vì môi trường.',
-  keywords: ['EcoScan', 'AI phân loại rác', 'sống xanh', 'zero waste', 'tái chế', 'green points'],
+  title: 'EcoScan AI - Phân loại rác, Bản đồ số, Chatbot & Cảnh báo môi trường',
+  description: 'Trí tuệ nhân tạo quét phân loại rác thải, tư vấn sinh thái với EcoBot AI, tra cứu bản đồ điểm thu gom và theo dõi cảnh báo môi trường AQI.',
+  keywords: ['EcoScan', 'AI phân loại rác', 'EcoBot', 'bản đồ số tái chế', 'cảnh báo môi trường AQI', 'sống xanh', 'zero waste'],
 };
 
 export default function RootLayout({
@@ -24,6 +25,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <EcoBotWidget />
         </EcoStoreProvider>
       </body>
     </html>

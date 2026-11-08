@@ -10,22 +10,24 @@ import {
   Sparkles,
   ArrowRight,
   TrendingDown,
-  Recycle,
-  ShieldCheck,
-  Zap,
+  Bot,
+  MapPin,
+  AlertTriangle,
   Globe2,
   CheckCircle2,
+  Wind,
+  ShieldAlert,
+  ShoppingBag,
 } from 'lucide-react';
 import PostCard from '@/components/PostCard';
 
 export default function HomePage() {
-  const { user, scans, posts } = useEcoStore();
+  const { user, scans, posts, alerts, locations } = useEcoStore();
 
   return (
     <div className="space-y-16 sm:space-y-24">
       {/* Hero Section */}
       <section className="relative overflow-hidden rounded-3xl p-6 sm:p-12 lg:p-16 bg-gradient-to-br from-emerald-900 via-forest-900 to-slate-900 text-white shadow-2xl">
-        {/* Subtle decorative glow */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -33,18 +35,18 @@ export default function HomePage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold backdrop-blur-md">
             <Sparkles className="w-3.5 h-3.5 animate-pulse text-emerald-300" />
-            <span>Nền tảng Phân Loại Rác Thông Minh Bằng AI</span>
+            <span>Nền tảng Sinh Thái Thông Minh Toàn Diện 2026</span>
           </div>
 
           {/* Heading */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15]">
-            Quét Rác Bằng <span className="text-emerald-400">AI</span>,<br />
-            Chung Tay Sống <span className="text-teal-300">Xanh Bền Vững</span>.
+            Hệ Sinh Thái <span className="text-emerald-400">EcoScan AI</span>,<br />
+            Hành Động Vì <span className="text-teal-300">Hành Tinh Xanh</span>.
           </h1>
 
           {/* Description */}
           <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-normal max-w-2xl">
-            Chỉ với một bức ảnh, <strong>EcoScan AI</strong> nhận diện vật liệu trong tích tắc, chấm điểm <strong>Eco Score</strong>, hướng dẫn xử lý đúng quy chuẩn và quy đổi thành <strong>Green Points</strong> để cùng cộng đồng kiến tạo lối sống không rác thải.
+            Tích hợp toàn diện: <strong>Nhận diện rác bằng AI Vision</strong>, trợ lý tư vấn sinh thái <strong>EcoBot AI</strong>, <strong>Bản đồ số</strong> điểm thu gom pin & phế liệu, hệ thống <strong>Cảnh báo ô nhiễm AQI</strong> và <strong>Cộng đồng sống xanh 0 đồng</strong>.
           </p>
 
           {/* CTA Buttons */}
@@ -59,27 +61,39 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="/community"
+              href="/chatbot"
               className="px-6 sm:px-7 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-bold text-sm sm:text-base backdrop-blur-md flex items-center gap-2 transition-all"
             >
-              <Users className="w-5 h-5 text-emerald-300" />
-              <span>Ghé Thăm Cộng Đồng</span>
+              <Bot className="w-5 h-5 text-emerald-300" />
+              <span>Hỏi Trợ Lý EcoBot</span>
+            </Link>
+
+            <Link
+              href="/map"
+              className="px-5 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-semibold text-sm backdrop-blur-md flex items-center gap-2 transition-all"
+            >
+              <MapPin className="w-4 h-4 text-emerald-400" />
+              <span>Bản Đồ Điểm Thu Gom</span>
             </Link>
           </div>
 
           {/* Trust points */}
-          <div className="pt-6 border-t border-white/10 grid grid-cols-3 gap-4 text-xs text-slate-300 font-medium">
+          <div className="pt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-slate-300 font-medium">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>Độ chính xác AI 98%</span>
+              <span>AI Vision 98%</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>Chuẩn phân loại 2026</span>
+              <span>EcoBot 24/7</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>Tích điểm đổi quà xanh</span>
+              <span>Bản đồ 63 tỉnh thành</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <span>Cảnh báo AQI liên tục</span>
             </div>
           </div>
         </div>
@@ -128,50 +142,115 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How It Works: 3 Steps */}
+      {/* Feature Pillars: 5 Core Capabilities */}
       <section className="space-y-8">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            Quy trình thông minh
+            5 Trụ Cột Đột Phá
           </span>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Chỉ 3 bước đơn giản để tái chế chuẩn xác
+            Giải pháp thông minh vì môi trường bền vững
           </h2>
           <p className="text-sm sm:text-base text-slate-500">
-            Ứng dụng công nghệ thị giác máy tính tiên tiến giúp việc phân loại rác thải tại nguồn trở nên dễ dàng và thú vị hơn bao giờ hết.
+            Kết hợp công nghệ trí tuệ nhân tạo, dữ liệu địa lý số và sức mạnh kết nối cộng đồng.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 space-y-4 hover:border-emerald-300 transition-all">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-lg">
-              01
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Pillar 1: Image Recognition */}
+          <Link
+            href="/scan"
+            className="glass-card rounded-3xl p-6 border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all group space-y-4"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Scan className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800">Chụp hoặc Tải ảnh vật phẩm</h3>
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+              1. Nhận Diện Hình Ảnh & Quét AI
+            </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Dùng camera điện thoại chụp chai nhựa, lon nhôm, hộp giấy, pin cũ hoặc kéo thả ảnh trực tiếp từ thư viện máy.
+              Mô hình thị giác máy tính nhận diện chai nhựa, bao bì, rác nguy hại, vẽ khung bounding box trực quan và chấm điểm Eco Score.
             </p>
-          </div>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 group-hover:translate-x-1 transition-transform">
+              Trải nghiệm studio quét <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </Link>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 space-y-4 hover:border-emerald-300 transition-all">
-            <div className="w-12 h-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center font-black text-lg">
-              02
+          {/* Pillar 2: Chatbot */}
+          <Link
+            href="/chatbot"
+            className="glass-card rounded-3xl p-6 border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all group space-y-4"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Bot className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800">AI Phân Tích & Chấm Eco Score</h3>
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+              2. Trợ Lý Cố Vấn EcoBot AI
+            </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Mô hình thị giác máy tính nhận diện thành phần chất liệu, đo lường thời gian phân hủy, tính lượng CO2 tiết kiệm và đề xuất ý tưởng DIY.
+              Tư vấn trực tiếp 24/7 về phân loại các loại nhựa #1-#7, bí quyết ủ phân hữu cơ bokashi, ý tưởng DIY và thói quen zero-waste.
             </p>
-          </div>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-teal-600 group-hover:translate-x-1 transition-transform">
+              Trò chuyện ngay <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </Link>
 
-          <div className="glass-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 space-y-4 hover:border-emerald-300 transition-all">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-lg">
-              03
+          {/* Pillar 3: Eco Map */}
+          <Link
+            href="/map"
+            className="glass-card rounded-3xl p-6 border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all group space-y-4"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <MapPin className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800">Tích Điểm & Lan Tỏa Cộng Đồng</h3>
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
+              3. Bản Đồ Số Thu Gom & Refill
+            </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Mỗi món đồ phân loại thành công được thưởng Green Points, mở khóa huy hiệu sinh thái độc quyền và chia sẻ lên Eco Feed.
+              Bản đồ tương tác chỉ dẫn các điểm bỏ pin cũ an toàn, vựa thu mua phế liệu, trạm làm đầy dầu gội (refill) và thùng rác phân loại.
             </p>
-          </div>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
+              Mở bản đồ <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </Link>
+
+          {/* Pillar 4: Alerts */}
+          <Link
+            href="/alerts"
+            className="glass-card rounded-3xl p-6 border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all group space-y-4"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-rose-700 transition-colors">
+              4. Cảnh Báo Ô Nhiễm & Chỉ Số AQI
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Theo dõi chất lượng không khí PM2.5, chỉ số UV và hệ thống báo cáo điểm nóng xả rác tự phát để kêu gọi tình nguyện viên làm sạch.
+            </p>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 group-hover:translate-x-1 transition-transform">
+              Xem bảng cảnh báo <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </Link>
+
+          {/* Pillar 5: Community & Marketplace */}
+          <Link
+            href="/community"
+            className="glass-card rounded-3xl p-6 border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all group space-y-4 md:col-span-2 lg:col-span-2"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ShoppingBag className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-amber-700 transition-colors">
+              5. Mạng Xã Hội Xanh & Chợ Trao Đổi Đồ Cũ 0 Đồng
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Eco Feed chia sẻ mẹo tái chế, Chợ Xanh cho/tặng chai lọ và quần áo cũ, cùng các sự kiện đổi pin lấy sen đá và workshop môi trường thú vị.
+            </p>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 group-hover:translate-x-1 transition-transform">
+              Tham gia cộng đồng <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </Link>
         </div>
       </section>
 
@@ -200,27 +279,6 @@ export default function HomePage() {
             <PostCard key={post.id} post={post} />
           ))}
         </div>
-      </section>
-
-      {/* Daily Eco Tip Box */}
-      <section className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
-            <Globe2 className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="font-bold text-base text-slate-900">Mẹo Xanh Hôm Nay (Daily Eco Tip)</h4>
-            <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-              1 tấn giấy tái chế giúp cứu sống 17 cây xanh trưởng thành và tiết kiệm 26.000 lít nước sạch! Hãy gom sạch giấy vụn và bìa carton vào tuần này nhé.
-            </p>
-          </div>
-        </div>
-        <Link
-          href="/scan"
-          className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs sm:text-sm hover:bg-emerald-700 shadow-sm flex-shrink-0 transition-all"
-        >
-          Quét rác giấy ngay
-        </Link>
       </section>
     </div>
   );

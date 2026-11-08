@@ -9,25 +9,31 @@ import {
   Share2,
   RotateCcw,
   Lightbulb,
-  ShieldAlert,
-  ArrowRight,
   TrendingDown,
   Layers,
+  Bot,
+  Box,
+  Eye,
+  PieChart,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useEcoStore } from '@/lib/store';
 
 interface ScanResultCardProps {
   result: ScanResult;
   onReset: () => void;
   onShareToCommunity: (result: ScanResult) => void;
+  onAskChatbot?: (result: ScanResult) => void;
 }
 
 export default function ScanResultCard({
   result,
   onReset,
   onShareToCommunity,
+  onAskChatbot,
 }: ScanResultCardProps) {
-  const [pointsRewarded, setPointsRewarded] = useState(false);
+  const { sendChatMessage } = useEcoStore();
+  const [showBoxes, setShowBoxes] = useState(true);
 
   // Trigger celebration confetti on mount
   useEffect(() => {
@@ -38,7 +44,6 @@ export default function ScanResultCard({
         origin: { y: 0.65 },
         colors: ['#10b981', '#34d399', '#059669', '#6ee7b7'],
       });
-      setPointsRewarded(true);
     } catch {
       // ignore
     }
@@ -71,11 +76,23 @@ export default function ScanResultCard({
 
   const badgeInfo = getRecyclabilityBadge(result.recyclability);
 
-  // Eco score coloring
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-600 border-emerald-500 bg-emerald-50';
-    if (score >= 50) return 'text-amber-600 border-amber-500 bg-amber-50';
-    return 'text-rose-600 border-rose-500 bg-rose-50';
+  // Fallback bounding boxes if none provided
+  const boundingBoxes = result.boundingBoxes || [
+    { label: `${result.itemName}`, confidence: result.confidence, box: [20, 25, 50, 60] as [number, number, number, number], color: '#10b981' },
+    { label: 'Chi tiết phụ', confidence: 0.92, box: [15, 38, 20, 15] as [number, number, number, number], color: '#3b82f6' },
+  ];
+
+  const materialBreakdowns = result.materialBreakdowns || [
+    { name: result.materialType, percentage: 85, recyclable: result.recyclability === 'high', color: '#10b981' },
+    { name: 'Phụ gia & Bao bì phụ', percentage: 15, recyclable: false, color: '#f59e0b' },
+  ];
+
+  const handleAskEcoBot = () => {
+    const question = `Tôi vừa quét món đồ "${result.itemName}". Bạn có thể hướng dẫn chi tiết cách tái chế và tận dụng món này hiệu quả nhất được không?`;
+    sendChatMessage(question, result);
+    if (onAskChatbot) {
+      onAskChatbot(result);
+    }
   };
 
   return (
@@ -123,6 +140,87 @@ export default function ScanResultCard({
 
       {/* Main Grid Information */}
       <div className="p-6 sm:p-8 space-y-6">
+        {/* Scanned Image with AI Bounding Box Overlays */}
+        <div className="relative rounded-3xl overflow-hidden bg-slate-900 border-2 border-emerald-500/30 max-h-80 flex items-center justify-center shadow-lg">
+          <img
+            src={result.imageUrl}
+            alt={result.itemName}
+            className="w-full h-72 sm:h-80 object-cover opacity-90"
+          />
+
+          {/* AI Bounding Boxes */}
+          {showBoxes && (
+            <div className="absolute inset-0 pointer-events-none">
+              {boundingBoxes.map((box, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    top: `${box.box[0]}%`,
+                    left: `${box.box[1]}%`,
+                    width: `${box.box[2]}%`,
+                    height: `${box.box[3]}%`,
+                    borderColor: box.color,
+                  }}
+                  className="absolute border-2 rounded-xl shadow-xs transition-all animate-in fade-in duration-300"
+                >
+                  <span
+                    style={{ backgroundColor: box.color }}
+                    className="absolute -top-5 left-0 px-2 py-0.5 rounded-md text-[10px] font-extrabold text-white whitespace-nowrap shadow-md flex items-center gap-1"
+                  >
+                    <Box className="w-2.5 h-2.5" />
+                    <span>{box.label} ({Math.round(box.confidence * 100)}%)</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Toggle Bounding Box Button */}
+          <div className="absolute bottom-3 right-3 z-10">
+            <button
+              onClick={() => setShowBoxes(!showBoxes)}
+              className="px-3 py-1.5 rounded-xl bg-black/70 hover:bg-black/90 backdrop-blur-md text-white text-xs font-semibold flex items-center gap-1.5 shadow-md border border-white/20 transition-all"
+            >
+              <Eye className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{showBoxes ? 'Ẩn khung AI' : 'Hiện khung AI'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Material Composition Breakdown Bars */}
+        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <PieChart className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Phân Tích Thành Phần Vật Liệu:</span>
+            </h4>
+            <span className="text-[11px] text-slate-400">Độ chính xác cao</span>
+          </div>
+
+          <div className="space-y-2">
+            {materialBreakdowns.map((mat, i) => (
+              <div key={i} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full inline-block"
+                      style={{ backgroundColor: mat.color }}
+                    />
+                    {mat.name}
+                  </span>
+                  <span className="font-bold text-slate-800">{mat.percentage}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${mat.percentage}%`, backgroundColor: mat.color }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Recyclability Level */}
@@ -207,13 +305,26 @@ export default function ScanResultCard({
             <RotateCcw className="w-4 h-4" /> Quét món khác
           </button>
 
-          <button
-            type="button"
-            onClick={() => onShareToCommunity(result)}
-            className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white font-bold text-sm shadow-md shadow-emerald-600/30 flex items-center gap-2 transition-all transform active:scale-95"
-          >
-            <Share2 className="w-4 h-4" /> Chia sẻ lên Cộng đồng (+30 GP)
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Ask EcoBot */}
+            <button
+              type="button"
+              onClick={handleAskEcoBot}
+              className="px-4 py-2.5 rounded-2xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-sm flex items-center gap-2 transition-all"
+            >
+              <Bot className="w-4 h-4 text-teal-600" />
+              <span>Hỏi EcoBot</span>
+            </button>
+
+            {/* Share to Community */}
+            <button
+              type="button"
+              onClick={() => onShareToCommunity(result)}
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white font-bold text-sm shadow-md shadow-emerald-600/30 flex items-center gap-2 transition-all transform active:scale-95"
+            >
+              <Share2 className="w-4 h-4" /> Chia sẻ lên Cộng đồng (+30 GP)
+            </button>
+          </div>
         </div>
       </div>
     </div>

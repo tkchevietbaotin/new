@@ -17,21 +17,30 @@ import {
   LogOut,
   ChevronDown,
   Award,
+  Bot,
+  MapPin,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { user, logout, geminiApiKey, setGeminiApiKey, users, switchUser } = useEcoStore();
+  const { user, logout, geminiApiKey, setGeminiApiKey, users, switchUser, alerts } = useEcoStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [keyInput, setKeyInput] = useState(geminiApiKey);
   const [userDropdown, setUserDropdown] = useState(false);
 
+  // Active critical alerts count
+  const activeAlertsCount = alerts.filter((a) => a.severity === 'critical' || a.severity === 'warning').length;
+
   const navLinks = [
     { href: '/', label: 'Trang chủ', icon: Leaf },
     { href: '/scan', label: 'Quét AI', icon: Scan, highlight: true },
+    { href: '/chatbot', label: 'EcoBot', icon: Bot },
+    { href: '/map', label: 'Bản đồ số', icon: MapPin },
+    { href: '/alerts', label: 'Cảnh báo', icon: AlertTriangle, badge: activeAlertsCount },
     { href: '/community', label: 'Cộng đồng', icon: Users },
-    { href: '/leaderboard', label: 'Xếp hạng & Thử thách', icon: Trophy },
+    { href: '/leaderboard', label: 'Xếp hạng', icon: Trophy },
   ];
 
   const handleSaveKey = () => {
@@ -45,25 +54,25 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+            <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
                 <Leaf className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
-                <span className="font-extrabold text-lg sm:text-xl text-slate-800 tracking-tight flex items-center gap-1">
+                <span className="font-extrabold text-base sm:text-lg text-slate-800 tracking-tight flex items-center gap-1">
                   Eco<span className="text-emerald-600">Scan</span>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 ml-1 border border-emerald-200">
+                  <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 ml-0.5 border border-emerald-200">
                     AI
                   </span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium hidden sm:block">
-                  Phân loại rác thông minh
+                <span className="text-[9px] text-slate-400 font-medium hidden md:block">
+                  Phân loại & Môi trường
                 </span>
               </div>
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+            <nav className="hidden xl:flex items-center gap-1">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = pathname === link.href;
@@ -71,20 +80,25 @@ export default function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all relative ${
                       link.highlight
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25 hover:opacity-95 hover:shadow-lg'
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25 hover:opacity-95'
                         : isActive
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-xs'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold'
                         : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100/70'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${link.highlight ? 'text-emerald-100' : ''}`} />
+                    <Icon className={`w-3.5 h-3.5 ${link.highlight ? 'text-emerald-100' : ''}`} />
                     <span>{link.label}</span>
+                    {link.badge ? (
+                      <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-black">
+                        {link.badge}
+                      </span>
+                    ) : null}
                     {link.highlight && (
-                      <span className="flex h-2 w-2 relative">
+                      <span className="flex h-1.5 w-1.5 relative">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
                       </span>
                     )}
                   </Link>
@@ -93,7 +107,7 @@ export default function Navbar() {
             </nav>
 
             {/* Right Side: Points, API Key & User Profile */}
-            <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* API Key Modal Button */}
               <button
                 onClick={() => {
@@ -108,8 +122,8 @@ export default function Navbar() {
                 }`}
               >
                 <Key className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden lg:inline">
-                  {geminiApiKey ? 'Gemini AI: Bật' : 'API Key'}
+                <span className="hidden 2xl:inline">
+                  {geminiApiKey ? 'Gemini: Bật' : 'API Key'}
                 </span>
               </button>
 
@@ -122,7 +136,7 @@ export default function Navbar() {
                   >
                     <Sparkles className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
                     <span>{user.greenPoints}</span>
-                    <span className="text-[11px] font-medium text-emerald-600 hidden sm:inline">
+                    <span className="text-[10px] font-medium text-emerald-600 hidden sm:inline">
                       GP
                     </span>
                   </Link>
@@ -138,7 +152,7 @@ export default function Navbar() {
                         alt={user.name}
                         className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover ring-2 ring-emerald-500/30"
                       />
-                      <span className="text-xs sm:text-sm font-semibold text-slate-700 max-w-[90px] truncate hidden sm:inline">
+                      <span className="text-xs sm:text-sm font-semibold text-slate-700 max-w-[80px] truncate hidden sm:inline">
                         {user.name}
                       </span>
                       <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -159,13 +173,13 @@ export default function Navbar() {
 
                         <Link
                           href="/profile"
-                          className="flex items-center gap-2.5 px-4 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs sm:text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
                         >
                           <User className="w-4 h-4 text-emerald-600" />
                           <span>Hồ sơ & Huy hiệu sinh thái</span>
                         </Link>
 
-                        <div className="px-4 py-2 text-[11px] font-semibold text-slate-400 border-t border-slate-100">
+                        <div className="px-4 py-1.5 text-[11px] font-semibold text-slate-400 border-t border-slate-100">
                           Đổi nhanh tài khoản mẫu:
                         </div>
                         {users.map((u) => (
@@ -197,7 +211,7 @@ export default function Navbar() {
               ) : (
                 <Link
                   href="/auth"
-                  className="px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-all"
+                  className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-all"
                 >
                   Đăng nhập
                 </Link>
@@ -206,7 +220,7 @@ export default function Navbar() {
               {/* Mobile Hamburger Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100"
+                className="xl:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100"
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -216,7 +230,7 @@ export default function Navbar() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200/80 bg-white/95 px-4 pt-3 pb-5 space-y-2">
+          <div className="xl:hidden border-t border-slate-200/80 bg-white/95 px-4 pt-3 pb-5 space-y-1.5">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname === link.href;
@@ -225,16 +239,23 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     link.highlight
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-emerald-600 text-white font-bold'
                       : isActive
                       ? 'bg-emerald-50 text-emerald-700 font-bold'
                       : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{link.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5" />
+                    <span>{link.label}</span>
+                  </div>
+                  {link.badge ? (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-xs font-bold">
+                      {link.badge}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
@@ -267,7 +288,7 @@ export default function Navbar() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 text-emerald-700 font-bold text-lg">
                 <Key className="w-5 h-5" />
-                <span>Cấu hình Gemini Vision API</span>
+                <span>Cấu hình Gemini Vision & Chat API</span>
               </div>
               <button
                 onClick={() => setShowKeyModal(false)}

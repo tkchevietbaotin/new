@@ -34,6 +34,20 @@ export interface User {
   joinedDate: string;
 }
 
+export interface BoundingBox {
+  label: string;
+  confidence: number;
+  box: [number, number, number, number]; // [top, left, width, height] in percentages
+  color: string;
+}
+
+export interface MaterialBreakdown {
+  name: string;
+  percentage: number;
+  recyclable: boolean;
+  color: string;
+}
+
 export interface ScanResult {
   id: string;
   itemName: string;
@@ -50,6 +64,8 @@ export interface ScanResult {
   imageUrl: string;
   timestamp: string;
   scannedBy?: string;
+  boundingBoxes?: BoundingBox[];
+  materialBreakdowns?: MaterialBreakdown[];
 }
 
 export interface Comment {
@@ -93,4 +109,91 @@ export interface Challenge {
   completed: boolean;
   icon: string;
   expiresIn: string;
+}
+
+// Chatbot types
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'bot';
+  text: string;
+  timestamp: string;
+  suggestions?: string[];
+  scanItemAttachment?: ScanResult;
+}
+
+// Digital Eco Map types
+export type LocationCategory =
+  | 'battery_ewaste'
+  | 'recycling_center'
+  | 'refill_station'
+  | 'public_bin';
+
+export interface EcoLocation {
+  id: string;
+  name: string;
+  category: LocationCategory;
+  categoryNameVi: string;
+  address: string;
+  city: string;
+  distanceKm: number;
+  coordinates: { lat: number; lng: number };
+  acceptedMaterials: string[];
+  openingHours: string;
+  phone: string;
+  verified: boolean;
+  rewardPointsBonus: number;
+}
+
+// Environmental Alerts & Hazards
+export type AlertSeverity = 'critical' | 'warning' | 'info';
+export type AlertStatus = 'active' | 'in_progress' | 'resolved';
+
+export interface EcoAlert {
+  id: string;
+  title: string;
+  description: string;
+  type: 'aqi_warning' | 'waste_hotspot' | 'illegal_dumping' | 'clean_campaign';
+  severity: AlertSeverity;
+  status: AlertStatus;
+  location: string;
+  reportedBy: string;
+  reportedAt: string;
+  imageUrl?: string;
+  upvotes: number;
+  volunteersJoined: number;
+}
+
+// Marketplace & Event types for Community
+export interface MarketplaceItem {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  condition: 'Mới 100%' | 'Như mới (95%)' | 'Đã qua sử dụng';
+  owner: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  imageUrl: string;
+  location: string;
+  isFree: boolean;
+  greenPointsPrice?: number;
+  status: 'available' | 'claimed';
+  createdAt: string;
+}
+
+export interface GreenEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  organizer: string;
+  participantsCount: number;
+  maxParticipants: number;
+  rewardPoints: number;
+  imageUrl: string;
+  isJoined: boolean;
 }
