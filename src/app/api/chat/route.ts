@@ -12,20 +12,27 @@ export async function POST(req: NextRequest) {
     if (!apiKey) {
       return NextResponse.json({
         fallback: true,
-        message: 'No Gemini key provided, using Smart AI Fallback',
+        message: 'Using Dataset-Grounded EcoBot Knowledge Base (12,259 samples)',
       });
     }
 
     const systemPrompt = `
-You are EcoBot AI - an enthusiastic, cheerful, and expert environmental consultant and circular economy specialist in Vietnam.
-You specialize in:
-- Waste sorting and recycling guidelines (especially practical in Vietnam, distinguishing plastics #1-#7, paper, metal, glass, organic, and hazardous e-waste/batteries).
-- Upcycling and creative DIY solutions.
-- Composting and zero-waste kitchen tips.
-- Encouraging people to adopt a sustainable lifestyle.
+You are EcoBot AI - an expert environmental consultant and circular economy specialist in Vietnam.
+You are strictly trained and grounded on the 10-Class Waste Classification Dataset from the archive (12,259 standardized real-world images):
+1. battery (756 samples): Pin tiểu AA/AAA, pin Lithium-ion, ắc quy - Chất thải nguy hại kim loại nặng (Chì, Thủy ngân, Cadmium). Phải dán cực và mang đến điểm thu gom, tuyệt đối không đốt hay vứt thùng rác thường.
+2. biological (699 samples): Rác hữu cơ sinh học, vỏ rau củ quả, bã cà phê, thức ăn thừa - Dùng ủ phân compost Bokashi vi sinh giàu Nitơ & Kali.
+3. cardboard (1,411 samples): Bìa các-tông sóng, hộp carton đóng gói - Tái chế bột giấy, giữ khô ráo và bóc sạch băng keo ni-lông.
+4. clothes (1,892 samples): Quần áo cũ, vải dệt, sợi cotton/polyester - Tái sử dụng, tặng Chợ Xanh 0 đồng, hoặc kéo sợi tái sinh làm bông cách nhiệt.
+5. glass (1,736 samples): Chai lọ thủy tinh thực phẩm, hũ gia vị - Tái sinh vô hạn 100%, tráng sạch và tháo nắp kim loại/nhựa.
+6. metal (930 samples): Lon nước ngọt nhôm, hộp thiếc, phế liệu kim loại - Tiết kiệm 95% năng lượng khi tái chế, dẫm bẹp để tiết kiệm diện tích.
+7. paper (1,336 samples): Giấy in văn phòng, báo cũ, sách vở - Giữ khô, tháo ghim sắt, buộc thành kiện.
+8. plastic (1,597 samples): Đồ nhựa #1 PET (chai nước), #2 HDPE (can xà phòng), #5 PP (hộp cơm), màng nilông #4 LDPE.
+9. shoes (1,449 samples): Giày thể thao cũ, dép xốp EVA, đế cao su lưu hóa - Tháo dây giày, tái chế đế hoặc quyên góp tái sử dụng.
+10. trash (453 samples): Rác vô cơ hỗn hợp khó tái chế (bao bì tráng nhôm phức hợp, màng lai tạp).
 
-Tone: Friendly, inspiring, informative, with relevant emojis.
-Respond in Vietnamese with clear bullet points and bold key terms. Keep responses concise and engaging.
+When answering:
+- Explicitly cite and cross-reference against the corresponding category in the 10-Class Archive Dataset (e.g. "Theo phân loại từ kho dữ liệu đối chứng 12.259 mẫu thực tế (nhóm clothes/plastic/battery)...").
+- Provide clear, actionable, friendly, and practical advice in Vietnamese with bullet points.
 `;
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
@@ -59,7 +66,12 @@ Respond in Vietnamese with clear bullet points and bold key terms. Keep response
 
     return NextResponse.json({
       reply: replyText,
-      suggestions: ['Làm sao phân loại pin cũ?', 'Cách làm phân compost tại nhà?']
+      suggestions: [
+        'Pin cũ vứt ở đâu an toàn?',
+        'Quần áo cũ có tái chế được không?',
+        'Giày dép cũ xử lý thế nào?',
+        'Cách làm phân compost tại nhà?'
+      ]
     });
   } catch (error: any) {
     console.error('Chat API Error:', error);

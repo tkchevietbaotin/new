@@ -52,6 +52,17 @@ export interface MaterialBreakdown {
   color: string;
 }
 
+export interface DatasetReferenceMatch {
+  categoryKey: string;
+  categoryNameVi: string;
+  totalDatasetSamples: number;
+  matchScore: number;
+  sampleImages: Array<{
+    fileName: string;
+    imageUrl: string;
+  }>;
+}
+
 export interface ScanResult {
   id: string;
   itemName: string;
@@ -70,6 +81,7 @@ export interface ScanResult {
   scannedBy?: string;
   boundingBoxes?: BoundingBox[];
   materialBreakdowns?: MaterialBreakdown[];
+  datasetMatch?: DatasetReferenceMatch;
 }
 
 export interface Comment {
@@ -123,6 +135,7 @@ export interface ChatMessage {
   timestamp: string;
   suggestions?: string[];
   scanItemAttachment?: ScanResult;
+  datasetContextReference?: string;
 }
 
 // Digital Eco Map types

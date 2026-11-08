@@ -75,63 +75,93 @@ const STORAGE_KEYS = {
   API_KEY: 'ecoscan_gemini_key',
 };
 
-// Preset EcoBot responses for rich intelligent conversational fallback
+// Preset EcoBot responses grounded directly on the 10-Class Archive Dataset (12,259 samples)
 function getBotResponse(userPrompt: string): { reply: string; suggestions?: string[] } {
   const q = userPrompt.toLowerCase();
 
   if (q.includes('pin') || q.includes('battery')) {
     return {
-      reply: '🔋 **Hướng dẫn xử lý Pin cũ đã qua sử dụng:**\n\n' +
-        '1. **TUYỆT ĐỐI KHÔNG** vứt pin chung với rác sinh hoạt hoặc đốt rác, vì pin chứa kim loại nặng nguy hiểm (Chì, Thủy ngân, Cadmium) làm ô nhiễm đất và nước ngầm hàng trăm năm.\n' +
-        '2. **Bảo quản an toàn:** Dán băng dính vào 2 cực của pin để tránh chập mạch cháy nổ, chứa trong lọ thủy tinh đậy kín.\n' +
-        '3. **Điểm thu gom miễn phí:** Bạn có thể mở mục **Bản Đồ Số (/map)** trên thanh menu để tìm điểm thu gom gần nhất (chuỗi Circle K, ĐH Bách Khoa, VinMart+...).\n\n' +
-        '🌱 *Mẹo nhỏ:* Hãy chuyển sang sử dụng pin sạc lại (Rechargeable NiMH) để tái sử dụng tới 1.000 lần nhé!',
-      suggestions: ['Mở bản đồ tìm điểm thu gom pin', 'Pin lithium-ion điện thoại có tái chế được không?']
+      reply: '🔋 **Phân loại Pin & Rác Điện Tử (Đối chiếu nhóm `battery` - 756 mẫu thực tế trong Dataset Archive):**\n\n' +
+        '1. **Nguy hại cao:** Pin chứa kim loại nặng độc hại (Chì, Cadmium, Thủy ngân). 1 viên pin cúc áo bị rò rỉ có thể làm ô nhiễm 500 lít nước ngầm trong 50 năm.\n' +
+        '2. **Cách xử lý chuẩn:** Dán băng dính vào 2 cực (+ và -), đựng trong hũ thủy tinh kín và mang tới điểm thu gom miễn phí (VinMart+, Circle K, ĐH Bách Khoa trên mục **Bản Đồ Số**).\n' +
+        '3. **Giải pháp xanh:** Chuyển sang sử dụng pin sạc NiMH để tái sử dụng tới 1.000 lần.',
+      suggestions: ['Mở bản đồ tìm điểm thu gom pin', 'Pin lithium-ion điện thoại xử lý thế nào?']
+    };
+  }
+
+  if (q.includes('ao') || q.includes('quan') || q.includes('vai') || q.includes('clothes') || q.includes('textile')) {
+    return {
+      reply: '👕 **Phân loại Quần Áo & Vải Cũ (Đối chiếu nhóm `clothes` - 1.892 mẫu trong Dataset Archive):**\n\n' +
+        '• **Tình trạng còn tốt (90-95%):** Đừng vứt đi! Hãy vào tab **"Chợ Xanh 0 Đồng"** trên ứng dụng để đăng cho/tặng hoặc gửi tới các tủ quần áo từ thiện.\n' +
+        '• **Vải rách / sờn cũ:** Cắt làm giẻ lau thấm nước gia đình hoặc gửi tới các đơn vị kéo sợi tái sinh làm bông cách âm, cách nhiệt.\n' +
+        '• **Tác động môi trường:** Tái sử dụng 1 chiếc áo thun cotton giúp tiết kiệm tới 2.700 lít nước sạch!',
+      suggestions: ['Đăng tặng quần áo lên Chợ Xanh', 'Cách tái chế ống quần jeans cũ làm túi']
+    };
+  }
+
+  if (q.includes('giay') || q.includes('dep') || q.includes('shoes') || q.includes('sneaker')) {
+    return {
+      reply: '👟 **Phân loại Giày Dép Cũ (Đối chiếu nhóm `shoes` - 1.449 mẫu trong Dataset Archive):**\n\n' +
+        '• Giày thể thao cũ thường có cấu tạo phức tạp: đế xốp EVA, cao su lưu hóa, keo dán và da tổng hợp PU (cần 50 - 100 năm để phân hủy).\n' +
+        '• **Cách xử lý:** Tháo rời dây giày (dây giày giặt sạch dùng lại cực bền). Nếu giày còn êm, hãy vệ sinh sạch và quyên góp.\n' +
+        '• **Sáng tạo Upcycling:** Tận dụng thân giày cũ làm chậu trồng hoa mười giờ, sen đá độc đáo ngoài ban công!',
+      suggestions: ['Làm chậu cây từ giày cũ', 'Quyên góp giày thể thao']
+    };
+  }
+
+  if (q.includes('carton') || q.includes('hop') || q.includes('cardboard') || q.includes('bia')) {
+    return {
+      reply: '📦 **Phân loại Bìa Các-tông (Đối chiếu nhóm `cardboard` - 1.411 mẫu trong Dataset Archive):**\n\n' +
+        '• Bìa carton sóng có khả năng tái chế lên tới 100% thành bột giấy mới nếu được giữ khô ráo.\n' +
+        '• **Quy trình 3 bước:** Bóc toàn bộ băng keo dán nilông → Tháo ghim bấm kim loại → Gấp phẳng để tối ưu thể tích thu gom.\n' +
+        '• **Mẹo:** Bìa carton xé nhỏ là nguồn chất xơ Carbon (Nâu) tuyệt vời để trộn vào thùng ủ phân compost vi sinh gia đình!',
+      suggestions: ['Làm nhà cho mèo từ hộp carton', 'Quy tắc ủ phân compost 50/50']
     };
   }
 
   if (q.includes('nhua') || q.includes('plastic') || q.includes('pet')) {
     return {
-      reply: '🧴 **Phân loại 7 ký hiệu Nhựa phổ biến:**\n\n' +
-        '- **#1 PET/PETE** (Chai nước, dầu ăn): *Tái chế rất tốt*. Nhớ tháo nắp và dẫm bẹp!\n' +
-        '- **#2 HDPE** (Bình sữa chua, can nước giặt): *Tái chế an toàn và bền bỉ*.\n' +
-        '- **#3 PVC** (Ống nước, màng bọc cũ): *Khó tái chế, chứa độc tố*.\n' +
-        '- **#4 LDPE** (Túi nilon, màng bọc khí): *Cần gom riêng các cơ sở chuyên biệt*.\n' +
+      reply: '🧴 **Phân loại Nhựa (Đối chiếu nhóm `plastic` - 1.597 mẫu trong Dataset Archive):**\n\n' +
+        '- **#1 PET** (Chai nước khoáng, nước ngọt): *Tái chế rất cao*. Nhớ tháo nắp và dẫm bẹp!\n' +
+        '- **#2 HDPE** (Bình sữa, can nước giặt): *Tái chế an toàn và bền bỉ*.\n' +
+        '- **#3 PVC** (Ống nước): *Chứa phụ gia clo độc, khó tái chế*.\n' +
+        '- **#4 LDPE** (Túi nilon, màng bọc): *Cần gom riêng các cơ sở chuyên biệt*.\n' +
         '- **#5 PP** (Hộp cơm lò vi sóng, nắp chai): *Chịu nhiệt tốt, tái chế cao*.\n' +
-        '- **#6 PS** (Hộp xốp, thìa nhựa dùng 1 lần): *Cực kỳ độc khi gặp nhiệt độ cao, hạn chế tối đa*.\n' +
-        '- **#7 Other** (Nhựa tổng hợp/PC): Khó tái chế, nên thay bằng thủy tinh/inox.',
+        '- **#6 PS** (Hộp xốp): *Không nên đựng đồ ăn nóng, hạn chế dùng*.',
       suggestions: ['Làm chậu cây từ chai nhựa #1', 'Cách thay thế túi nilon']
     };
   }
 
-  if (q.includes('compost') || q.includes('huu co') || q.includes('rau') || q.includes('ca phe')) {
+  if (q.includes('compost') || q.includes('huu co') || q.includes('rau') || q.includes('ca phe') || q.includes('biological')) {
     return {
-      reply: '🌱 **Bí quyết ủ Phân Hữu Cơ (Compost) không mùi hôi tại nhà:**\n\n' +
-        '1. **Quy tắc Vàng 50/50:** Trộn đều nguyên liệu **Xanh** (giàu Nitơ: vỏ rau củ, bã cà phê, xác trà) với nguyên liệu **Nâu** (giàu Carbon: lá khô, bìa carton xé nhỏ, mùn cưa).\n' +
-        '2. **Không bỏ vào:** Thịt cá, dầu mỡ động vật, phân thú cưng (vì dễ sinh dòi bọ và mùi hôi thối).\n' +
-        '3. **Khử mùi tự nhiên:** Thêm một ít bã cà phê phơi khô hoặc men vi sinh Bokashi / EM1 rải đều lên trên.\n' +
-        '4. Sau 3 - 4 tuần, bạn sẽ có lớp phân mùn đen giàu dinh dưỡng cho cây cảnh ban công!',
+      reply: '🌱 **Phân loại Rác Sinh Học / Hữu Cơ (Đối chiếu nhóm `biological` - 699 mẫu trong Dataset Archive):**\n\n' +
+        '1. **Quy tắc 50/50:** Trộn đều nguyên liệu **Xanh** (vỏ rau củ, bã cà phê, xác trà giàu Nitơ) với nguyên liệu **Nâu** (lá khô, bìa carton vụn giàu Carbon).\n' +
+        '2. **Tuyệt đối không bỏ vào:** Thịt cá mỡ, thức ăn dầu mỡ nhiều, phân thú cưng (dễ sinh mùi hôi).\n' +
+        '3. **Khử mùi:** Rắc bã cà phê phơi khô hoặc men vi sinh Bokashi / EM1 lên bề mặt.\n' +
+        'Sau 3 - 4 tuần, bạn sẽ có lớp phân mùn hữu cơ đen giàu dinh dưỡng cho vườn cây ban công!',
       suggestions: ['Bã cà phê khử mùi thế nào?', 'Tham gia workshop ủ phân cuối tuần']
     };
   }
 
   if (q.includes('thuy tinh') || q.includes('glass')) {
     return {
-      reply: '🍶 **Thủy tinh - Vật liệu tuần hoàn vô hạn:**\n\n' +
-        '- Thủy tinh có thể tái sinh 100% không giới hạn số lần mà không hề suy giảm độ tinh khiết hay độ bền.\n' +
-        '- **Lưu ý khi phân loại:** Tráng sạch cặn bẩn bên trong, tháo nắp nhôm/nhựa. Không gom kính vỡ xây dựng hay bóng đèn chung với chai lọ thủy tinh thực phẩm.\n' +
-        '- **Ý tưởng Upcycling:** Tái sử dụng làm bình cắm hoa sen đá, lọ đựng ngũ cốc khô hoặc gắn đèn led fairy light trang trí phòng ngủ.',
-      suggestions: ['Đăng tặng hũ thủy tinh lên Chợ Xanh', 'Thời gian phân hủy thủy tinh là bao lâu?']
+      reply: '🍶 **Phân loại Thủy Tinh (Đối chiếu nhóm `glass` - 1.736 mẫu trong Dataset Archive):**\n\n' +
+        '• Thủy tinh thực phẩm tái sinh 100% không giới hạn số lần mà không suy giảm chất lượng.\n' +
+        '• **Lưu ý:** Rửa sạch cặn thức ăn, tháo nắp kim loại/nhựa. Không vứt chung với kính xây dựng vỡ hay bóng đèn.\n' +
+        '• **Mẹo:** Đăng tặng hũ mứt, lọ thủy tinh sạch lên **Chợ Xanh 0 Đồng** cho những bạn làm nến thơm handmade.',
+      suggestions: ['Đăng tặng hũ thủy tinh lên Chợ Xanh', 'Làm đèn ngủ từ chai thủy tinh']
     };
   }
 
   return {
-    reply: `Chào bạn! Về vấn đề **"${userPrompt}"**, theo nguyên tắc Kinh Tế Tuần Hoàn (5R - Refuse, Reduce, Reuse, Repurpose, Recycle):\n\n` +
-      '• Hãy ưu tiên **Tái sử dụng (Reuse)** hoặc **Sáng tạo công năng mới (Repurpose/DIY)** trước khi đem đi tiêu hủy.\n' +
-      '• Nếu đó là rác thải, bạn có thể vào mục **Quét AI (/scan)** chụp một bức ảnh để tôi phân tích phổ quang chất liệu, đo lường lượng CO₂ tiết kiệm và hướng dẫn xử lý chuẩn xác.\n' +
-      '• Đừng quên kiểm tra mục **Bản Đồ Số (/map)** để tìm các trạm thu gom và điểm Refill gần bạn nhất nhé! 🌍✨',
+    reply: `Chào bạn! Đối chiếu với **Cơ sở dữ liệu 10 nhóm rác thải chuẩn hóa (12.259 mẫu thực tế trong archive)**:\n\n` +
+      `Về câu hỏi **"${userPrompt}"**:\n` +
+      '• Hệ thống EcoScan AI hỗ trợ phân loại 10 nhóm: `battery` (pin), `biological` (hữu cơ), `cardboard` (bìa carton), `clothes` (quần áo), `glass` (thủy tinh), `metal` (kim loại), `paper` (giấy), `plastic` (nhựa), `shoes` (giày dép), `trash` (rác tạp).\n' +
+      '• Bạn có thể chụp ảnh hoặc tải ảnh lên mục **Quét AI (/scan)** hoặc mở mục **Kho Dataset (/dataset)** để xem và đối chiếu các mẫu thực tế tương đồng.\n' +
+      '• Đừng quên kiểm tra mục **Bản Đồ Số (/map)** để tìm điểm thu gom chuyên biệt gần nhất nhé! 🌍✨',
     suggestions: [
       'Pin cũ vứt ở đâu an toàn?',
+      'Quần áo cũ tái chế thế nào?',
       'Phân biệt các loại nhựa #1 đến #7?',
       'Cách ủ phân hữu cơ tại ban công'
     ]

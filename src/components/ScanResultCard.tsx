@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ScanResult } from '@/types';
 import {
   CheckCircle2,
@@ -15,6 +16,8 @@ import {
   Box,
   Eye,
   PieChart,
+  Database,
+  ArrowRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useEcoStore } from '@/lib/store';
@@ -88,7 +91,7 @@ export default function ScanResultCard({
   ];
 
   const handleAskEcoBot = () => {
-    const question = `Tôi vừa quét món đồ "${result.itemName}". Bạn có thể hướng dẫn chi tiết cách tái chế và tận dụng món này hiệu quả nhất được không?`;
+    const question = `Tôi vừa quét món đồ "${result.itemName}" (đối chiếu nhóm ${result.datasetMatch?.categoryNameVi || result.categoryNameVi} trong kho dữ liệu archive). Bạn có thể hướng dẫn chi tiết cách tái chế và tái sử dụng hiệu quả nhất theo bộ quy chuẩn này được không?`;
     sendChatMessage(question, result);
     if (onAskChatbot) {
       onAskChatbot(result);
@@ -186,6 +189,54 @@ export default function ScanResultCard({
             </button>
           </div>
         </div>
+
+        {/* Dataset Archive Ground Truth Reference */}
+        {result.datasetMatch && (
+          <div className="p-5 rounded-3xl bg-indigo-50/70 border border-indigo-200/90 space-y-3 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h4 className="text-sm font-bold text-indigo-950 flex items-center gap-2">
+                  <Database className="w-4 h-4 text-indigo-600" />
+                  <span>Đối Chiếu Với Kho Dữ Liệu Thực Tế (Archive Dataset):</span>
+                </h4>
+                <p className="text-xs text-indigo-700 mt-0.5">
+                  Khớp với nhóm <strong>{result.datasetMatch.categoryNameVi} (`{result.datasetMatch.categoryKey}`)</strong> — đối chiếu với <strong>{result.datasetMatch.totalDatasetSamples.toLocaleString()} mẫu thực tế</strong> trong kho dữ liệu archive.
+                </p>
+              </div>
+              <Link
+                href="/dataset"
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 self-start sm:self-auto transition-colors"
+              >
+                <span>Xem kho dataset</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* Reference Sample Images from Archive */}
+            <div className="space-y-1.5 pt-1 border-t border-indigo-100">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                Mẫu đối chứng tương đồng trong kho lưu trữ:
+              </span>
+              <div className="grid grid-cols-3 gap-2.5">
+                {result.datasetMatch.sampleImages.map((sample, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-2xl overflow-hidden border border-indigo-200 bg-slate-900 relative group aspect-square shadow-xs"
+                  >
+                    <img
+                      src={sample.imageUrl}
+                      alt={sample.fileName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    <span className="absolute bottom-1.5 inset-x-1.5 text-[9px] font-mono text-white bg-black/75 backdrop-blur-xs px-1.5 py-0.5 rounded-md text-center truncate">
+                      {sample.fileName}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Material Composition Breakdown Bars */}
         <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
