@@ -11,6 +11,11 @@ import {
   SwitchCamera,
   AlertCircle,
   HelpCircle,
+  Video,
+  VideoOff,
+  CheckCircle2,
+  X,
+  Play,
 } from 'lucide-react';
 import { analyzeImage } from '@/lib/ai-service';
 import { ScanResult } from '@/types';
@@ -64,8 +69,11 @@ export default function ScanUploader({
   const { geminiApiKey } = useEcoStore();
   const [dragActive, setDragActive] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState<{ title: string; message: string; code?: string } | null>(null);
+  const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [isSimulatedStream, setIsSimulatedStream] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('Đang khởi tạo AI Engine...');
 
@@ -74,17 +82,7 @@ export default function ScanUploader({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-
-  // Callback ref for video element to guarantee stream is attached immediately when mounted
-  const setVideoRef = useCallback((element: HTMLVideoElement | null) => {
-    videoRef.current = element;
-    if (element && streamRef.current) {
-      element.srcObject = streamRef.current;
-      element
-        .play()
-        .catch((err) => console.warn('Video playback notice:', err));
-    }
-  }, []);
+  const simulatedTimerRef = useRef<any>(null);
 
   // Stop camera helper
   const stopCamera = useCallback(() => {
@@ -95,17 +93,183 @@ export default function ScanUploader({
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    if (simulatedTimerRef.current) {
+      clearInterval(simulatedTimerRef.current);
+      simulatedTimerRef.current = null;
+    }
     setCameraActive(false);
+    setIsSimulatedStream(false);
+    setCameraLoading(false);
   }, []);
 
-  // Cleanup stream on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
+      if (simulatedTimerRef.current) {
+        clearInterval(simulatedTimerRef.current);
+      }
     };
   }, []);
+
+  // Check available camera devices
+  const checkAvailableCameras = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === 'videoinput');
+        setAvailableDevices(videoDevices);
+        if (videoDevices.length > 0 && !selectedDeviceId) {
+          setSelectedDeviceId(videoDevices[0].deviceId);
+        }
+      }
+    } catch (e) {
+      console.warn('Enumerate devices notice:', e);
+    }
+  };
+
+  // Attach stream to video element when element is ready
+  const attachStreamToVideo = (element: HTMLVideoElement, stream: MediaStream) => {
+    element.srcObject = stream;
+    element.muted = true;
+    element.setAttribute('playsinline', 'true');
+    element.setAttribute('autoplay', 'true');
+
+    element.onloadedmetadata = () => {
+      element
+        .play()
+        .then(() => setCameraLoading(false))
+        .catch((err) => {
+          console.warn('Video play() issue:', err);
+          setCameraLoading(false);
+        });
+    };
+  };
+
+  // Callback Ref for the video element
+  const setVideoRef = useCallback((element: HTMLVideoElement | null) => {
+    videoRef.current = element;
+    if (element && streamRef.current) {
+      attachStreamToVideo(element, streamRef.current);
+    }
+  }, []);
+
+  // Core function to start camera
+  const startCamera = async (deviceIdToUse?: string) => {
+    setCameraLoading(true);
+    setCameraError(null);
+    setIsSimulatedStream(false);
+
+    // Check secure context
+    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setCameraError({
+        title: 'Môi trường không an toàn (Yêu cầu HTTPS hoặc localhost)',
+        message: 'Trình duyệt chỉ cho phép truy cập Camera qua HTTPS hoặc địa chỉ http://localhost:3000. Bạn đang truy cập qua IP mạng, vui lòng mở lại bằng http://localhost:3000 trên trình duyệt.',
+        code: 'INSECURE_CONTEXT',
+      });
+      setCameraLoading(false);
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError({
+        title: 'Trình duyệt không hỗ trợ WebRTC',
+        message: 'Trình duyệt này không hỗ trợ API getUserMedia. Vui lòng sử dụng Chrome, Safari hoặc Edge mới nhất.',
+        code: 'NO_MEDIA_DEVICES',
+      });
+      setCameraLoading(false);
+      return;
+    }
+
+    // Stop existing stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+
+    let stream: MediaStream | null = null;
+    const targetDeviceId = deviceIdToUse || selectedDeviceId;
+
+    try {
+      // 1. Try with deviceId if specified
+      if (targetDeviceId) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { exact: targetDeviceId },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } else {
+        // 2. Try default flexible video constraint for desktop/laptop
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      }
+    } catch (err1: any) {
+      console.warn('First getUserMedia attempt failed, falling back to minimal video:true constraint...', err1);
+      try {
+        // 3. Fallback to basic video: true (universal across all webcams)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      } catch (err2: any) {
+        console.error('All camera attempts failed:', err2);
+        setCameraLoading(false);
+
+        const errorName = err2.name || err1.name || 'Lỗi không xác định';
+        let title = 'Không thể mở Camera';
+        let message = err2.message || '';
+
+        if (errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError') {
+          title = 'Quyền truy cập Camera bị từ chối';
+          message = 'Trình duyệt hoặc hệ điều hành macOS chưa được cấp quyền dùng camera. Vui lòng nhấp vào biểu tượng 🔒 hoặc 📹 trên thanh địa chỉ của trình duyệt, chọn "Cho phép" (Allow) camera, hoặc kiểm tra: Cài đặt hệ thống Mac → Quyền riêng tư & Bảo mật → Camera → Bật cho trình duyệt của bạn.';
+        } else if (errorName === 'NotFoundError' || errorName === 'DevicesNotFoundError') {
+          title = 'Không tìm thấy thiết bị Camera';
+          message = 'Máy tính chưa kết nối webcam hoặc camera đang bị ngắt kết nối. Bạn có thể dùng chế độ "Mô phỏng Camera AI" hoặc tải ảnh lên.';
+        } else if (errorName === 'NotReadableError' || errorName === 'TrackStartError') {
+          title = 'Camera đang bị ứng dụng khác chiếm dụng';
+          message = 'Một ứng dụng khác (Zoom, Google Meet, FaceTime, Photo Booth...) đang sử dụng camera của bạn. Vui lòng tắt các ứng dụng đó hoặc dùng chế độ "Mô phỏng Camera AI".';
+        } else {
+          message = `Mã lỗi: ${errorName} - ${message || 'Vui lòng kiểm tra lại thiết bị hoặc quyền riêng tư của trình duyệt.'}`;
+        }
+
+        setCameraError({ title, message, code: errorName });
+        return;
+      }
+    }
+
+    if (stream) {
+      streamRef.current = stream;
+      setCameraActive(true);
+      setCameraLoading(false);
+
+      // Refresh list of devices to display labels (labels are available only after permission granted)
+      checkAvailableCameras();
+
+      // If video element is already mounted, attach stream
+      if (videoRef.current) {
+        attachStreamToVideo(videoRef.current, stream);
+      }
+    }
+  };
+
+  // Start Simulated Live Camera (Zero-error fallback for computers without camera or with permissions blocked)
+  const startSimulatedCamera = () => {
+    stopCamera();
+    setCameraError(null);
+    setCameraActive(true);
+    setIsSimulatedStream(true);
+    setCameraLoading(false);
+  };
 
   const startAnalysis = async (base64Img: string, fileName?: string) => {
     setIsScanning(true);
@@ -165,96 +329,32 @@ export default function ScanUploader({
     }
   };
 
-  // Robust cross-platform camera starter (Mac, iPhone, Android, Windows)
-  const startCamera = async (preferredFacing: 'environment' | 'user' = cameraFacing) => {
-    setCameraError(null);
-
-    // Stop existing stream if any
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError('Trình duyệt hiện tại không hỗ trợ Web Camera trực tiếp. Hãy chọn "Chụp ảnh từ thiết bị" hoặc "Tải ảnh từ máy".');
+  const capturePhoto = () => {
+    if (isSimulatedStream) {
+      // Capture from simulated canvas / image
+      stopCamera();
+      // Select sample 1 as simulated capture
+      const sample = PRESET_SAMPLES[0];
+      startAnalysis(sample.url, 'camera_capture_simulated.jpg');
       return;
     }
 
-    let stream: MediaStream | null = null;
-
-    try {
-      // 1. First attempt: with requested facingMode (ideal, not exact, to avoid OverconstrainedError)
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: preferredFacing },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
-    } catch (err1: any) {
-      console.warn('Attempt with facingMode failed, falling back to default camera:', err1);
-      try {
-        // 2. Second attempt: simple fallback for laptops/Macs without back camera
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-      } catch (err2: any) {
-        console.error('Camera access failed completely:', err2);
-        if (err2.name === 'NotAllowedError' || err2.name === 'PermissionDeniedError') {
-          setCameraError('Quyền truy cập Camera đã bị từ chối. Vui lòng bấm vào biểu tượng ổ khóa hoặc camera trên thanh địa chỉ trình duyệt để cấp quyền.');
-        } else if (err2.name === 'NotFoundError' || err2.name === 'DevicesNotFoundError') {
-          setCameraError('Không tìm thấy thiết bị Camera trên máy này.');
-        } else {
-          setCameraError(`Không thể mở Camera (${err2.message || 'Lỗi không xác định'}). Bạn có thể dùng tính năng "Chụp ảnh từ thiết bị" hoặc tải ảnh lên.`);
-        }
-        return;
-      }
-    }
-
-    if (stream) {
-      streamRef.current = stream;
-      setCameraActive(true);
-
-      // If video element is already mounted, attach immediately
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch((err) => console.warn(err));
-      }
-    }
-  };
-
-  // Toggle front/back camera
-  const toggleCameraFacing = async () => {
-    const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
-    setCameraFacing(nextFacing);
-    await startCamera(nextFacing);
-  };
-
-  const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      const width = video.videoWidth || 640;
-      const height = video.videoHeight || 480;
+      const width = video.videoWidth || video.clientWidth || 640;
+      const height = video.videoHeight || video.clientHeight || 480;
 
       canvas.width = width;
       canvas.height = height;
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // Mirror if user-facing camera
-        if (cameraFacing === 'user') {
-          ctx.translate(width, 0);
-          ctx.scale(-1, 1);
-        }
         ctx.drawImage(video, 0, 0, width, height);
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
         stopCamera();
-        startAnalysis(dataUrl, 'camera_capture.jpg');
+        startAnalysis(dataUrl, 'camera_snapshot.jpg');
       }
     }
   };
@@ -300,7 +400,6 @@ export default function ScanUploader({
           className="hidden"
           onChange={handleFileChange}
         />
-        {/* Native mobile camera fallback input (works on all smartphones without permission prompt) */}
         <input
           ref={nativeCameraInputRef}
           type="file"
@@ -311,49 +410,78 @@ export default function ScanUploader({
         />
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Live Camera View */}
+        {/* Live Camera View (Physical or Simulated) */}
         {cameraActive ? (
-          <div className="relative max-w-lg mx-auto overflow-hidden rounded-3xl bg-black shadow-2xl border-4 border-emerald-500/50">
-            <video
-              ref={setVideoRef}
-              playsInline
-              autoPlay
-              muted
-              className={`w-full h-72 sm:h-80 object-cover ${
-                cameraFacing === 'user' ? 'scale-x-[-1]' : ''
-              }`}
-            />
+          <div className="relative max-w-lg mx-auto overflow-hidden rounded-3xl bg-slate-950 shadow-2xl border-4 border-emerald-500/60 animate-in fade-in zoom-in-95 duration-200">
+            {isSimulatedStream ? (
+              /* Simulated Motion Camera Feed */
+              <div className="relative w-full h-80 bg-slate-900 flex items-center justify-center overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1559825481-12a05cc00344?auto=format&fit=crop&w=800&q=80"
+                  alt="Simulated Camera Stream"
+                  className="w-full h-full object-cover opacity-85 scale-105"
+                />
+                <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-500/90 backdrop-blur-md text-white text-[11px] font-bold shadow-md flex items-center gap-1.5">
+                  <Play className="w-3 h-3 fill-white" />
+                  <span>Chế độ Camera Mô Phỏng Sẵn Sàng</span>
+                </div>
+              </div>
+            ) : (
+              /* Physical Webcam Stream */
+              <div className="relative w-full h-72 sm:h-80 bg-black flex items-center justify-center">
+                <video
+                  ref={setVideoRef}
+                  playsInline
+                  autoPlay
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                {cameraLoading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white gap-2">
+                    <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
+                    <span className="text-xs font-semibold">Đang kích hoạt ống kính Camera...</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Target Reticle Overlay */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-52 h-52 sm:w-60 sm:h-60 border-2 border-emerald-400 rounded-3xl border-dashed animate-pulse flex flex-col items-center justify-between p-3">
-                <span className="text-[10px] text-white bg-black/60 px-2.5 py-0.5 rounded-full font-bold backdrop-blur-md">
+                <span className="text-[10px] text-white bg-black/70 px-2.5 py-0.5 rounded-full font-bold backdrop-blur-md shadow-sm">
                   Căn giữa vật phẩm vào khung
                 </span>
-                <span className="text-[10px] text-emerald-300 bg-emerald-950/70 px-2.5 py-0.5 rounded-full font-bold">
-                  Camera Đang Hoạt Động
+                <span className="text-[10px] text-emerald-300 bg-emerald-950/80 px-2.5 py-0.5 rounded-full font-bold shadow-sm">
+                  AI Optical Tracker Active
                 </span>
               </div>
             </div>
 
-            {/* Top Toolbar: Switch Camera & Close */}
-            <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10">
-              <button
-                type="button"
-                onClick={toggleCameraFacing}
-                title="Đổi camera trước/sau"
-                className="p-2 rounded-xl bg-black/50 hover:bg-black/70 text-white backdrop-blur-md transition-all flex items-center gap-1.5 text-xs font-semibold"
-              >
-                <SwitchCamera className="w-4 h-4 text-emerald-400" />
-                <span className="hidden sm:inline">
-                  {cameraFacing === 'environment' ? 'Camera Sau' : 'Camera Trước'}
-                </span>
-              </button>
+            {/* Top Toolbar: Device Selector & Close */}
+            <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10 gap-2">
+              {availableDevices.length > 1 && !isSimulatedStream ? (
+                <select
+                  value={selectedDeviceId}
+                  onChange={(e) => {
+                    setSelectedDeviceId(e.target.value);
+                    startCamera(e.target.value);
+                  }}
+                  className="bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-xl border border-white/20 focus:outline-none max-w-[200px] truncate"
+                >
+                  {availableDevices.map((d, i) => (
+                    <option key={d.deviceId || i} value={d.deviceId} className="bg-slate-900 text-white">
+                      {d.label || `Camera ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div />
+              )}
 
               <button
                 type="button"
                 onClick={stopCamera}
-                className="px-3 py-1.5 rounded-xl bg-black/50 hover:bg-black/70 text-white backdrop-blur-md text-xs font-semibold transition-all"
+                className="px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md text-xs font-bold transition-all border border-white/20"
               >
                 Đóng
               </button>
@@ -364,7 +492,7 @@ export default function ScanUploader({
               <button
                 type="button"
                 onClick={capturePhoto}
-                className="px-6 py-3 rounded-2xl text-sm font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-xl shadow-emerald-500/50 flex items-center gap-2 transition-all transform active:scale-95"
+                className="px-7 py-3 rounded-2xl text-sm font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-2xl shadow-emerald-500/50 flex items-center gap-2.5 transition-all transform active:scale-95"
               >
                 <Camera className="w-5 h-5 text-slate-950" />
                 <span>Chụp & Quét AI Ngay</span>
@@ -420,22 +548,19 @@ export default function ScanUploader({
               {/* Button 1: Live Webcam Stream */}
               <button
                 type="button"
-                onClick={() => startCamera('environment')}
-                className="px-5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all transform active:scale-95"
+                onClick={() => startCamera()}
+                disabled={cameraLoading}
+                className="px-5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all transform active:scale-95 disabled:opacity-50"
               >
-                <Camera className="w-4 h-4 text-emerald-400" /> Bật Camera trực tiếp
+                {cameraLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                ) : (
+                  <Camera className="w-4 h-4 text-emerald-400" />
+                )}
+                <span>Bật Camera trực tiếp</span>
               </button>
 
-              {/* Button 2: Native Camera Trigger (Mobile capture/Snapshot) */}
-              <button
-                type="button"
-                onClick={() => nativeCameraInputRef.current?.click()}
-                className="px-5 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md flex items-center gap-2 transition-all transform active:scale-95 sm:hidden"
-              >
-                <Camera className="w-4 h-4" /> Chụp ảnh nhanh
-              </button>
-
-              {/* Button 3: Choose file from computer */}
+              {/* Button 2: Choose file from computer */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -445,29 +570,49 @@ export default function ScanUploader({
               </button>
             </div>
 
-            {/* Error Display with Helpful Advice */}
+            {/* Error Display with Smart Actionable Fixes */}
             {cameraError && (
-              <div className="max-w-md mx-auto p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs text-left space-y-1.5 animate-in fade-in duration-150">
-                <div className="flex items-center gap-2 font-bold">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>Thông báo Camera:</span>
+              <div className="max-w-lg mx-auto p-4 rounded-3xl bg-rose-50 border border-rose-200 text-rose-800 text-xs text-left space-y-2 animate-in fade-in duration-150 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-sm text-rose-900">
+                    <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                    <span>{cameraError.title}</span>
+                  </div>
+                  <button
+                    onClick={() => setCameraError(null)}
+                    className="p-1 rounded-full text-rose-400 hover:text-rose-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <p className="leading-relaxed">{cameraError}</p>
-                <div className="pt-1 flex items-center gap-2">
+
+                <p className="leading-relaxed text-slate-700 text-xs">{cameraError.message}</p>
+
+                {/* Instant Solutions */}
+                <div className="pt-2 border-t border-rose-200/80 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => nativeCameraInputRef.current?.click()}
-                    className="underline font-bold hover:text-rose-900"
+                    onClick={startSimulatedCamera}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs flex items-center gap-1 transition-all"
                   >
-                    → Chụp ảnh qua ứng dụng máy ảnh thiết bị
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>Dùng Chế độ Camera Mô Phỏng (Test ngay)</span>
                   </button>
-                  <span className="text-slate-300">|</span>
+
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="underline font-bold hover:text-rose-900"
+                    className="px-3 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-all"
                   >
-                    → Chọn ảnh từ thư viện
+                    Tải ảnh từ máy
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => startCamera()}
+                    className="px-3 py-1.5 rounded-xl text-emerald-700 hover:underline font-bold text-xs flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Thử lại
                   </button>
                 </div>
               </div>
