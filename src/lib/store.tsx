@@ -653,6 +653,11 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
 
     setChatMessages((prev) => [...prev, userMsg]);
 
+    const chatGptQuery = scanItemAttachment
+      ? `Tôi muốn hỏi về rác thải "${scanItemAttachment.itemName}": Đó là rác thải gì, chất thải loại gì, cần làm gì với nó, có thể tái chế được không và tái chế được những gì? ${text}`
+      : `Hỏi về phân loại và tái chế rác thải: ${text}`;
+    const chatGptWebUrl = `https://chatgpt.com/?q=${encodeURIComponent(chatGptQuery)}`;
+
     // Try calling server api /api/chat with ChatGPT (OpenAI) or Gemini or EcoBot
     try {
       const res = await fetch('/api/chat', {
@@ -686,6 +691,7 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
             ],
             aiProvider: data.aiProvider || (openaiApiKey ? 'chatgpt' : 'ecobot'),
             model: data.model || chatModel,
+            chatGptWebUrl,
           };
           setChatMessages((prev) => [...prev, botMsg]);
           return;
@@ -706,6 +712,7 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
       suggestions,
       aiProvider: 'ecobot',
       model: 'ChatGPT-Grounded EcoBot',
+      chatGptWebUrl,
     };
     setChatMessages((prev) => [...prev, botMsg]);
   };

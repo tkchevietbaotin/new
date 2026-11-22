@@ -145,6 +145,7 @@ export interface ChatMessage {
   datasetContextReference?: string;
   aiProvider?: 'chatgpt' | 'gemini' | 'ecobot';
   model?: string;
+  chatGptWebUrl?: string;
 }
 
 // Digital Eco Map types

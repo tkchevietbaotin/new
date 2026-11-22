@@ -19,6 +19,7 @@ import {
   Cpu,
   X,
   Zap,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function ChatbotPage() {
@@ -207,14 +208,26 @@ export default function ChatbotPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-[10px] text-slate-400 px-10 mt-1">
+                <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-400 px-10 mt-1">
                   <span>{msg.timestamp}</span>
                   {msg.sender === 'bot' && (
-                    <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-medium">
-                      {msg.aiProvider === 'chatgpt'
-                        ? `ChatGPT (${msg.model || 'OpenAI'})`
-                        : msg.model || 'EcoBot Grounded'}
-                    </span>
+                    <>
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-medium">
+                        {msg.aiProvider === 'chatgpt'
+                          ? `ChatGPT (${msg.model || 'OpenAI'})`
+                          : msg.model || 'EcoBot Grounded'}
+                      </span>
+                      <a
+                        href={msg.chatGptWebUrl || `https://chatgpt.com/?q=${encodeURIComponent(msg.text.slice(0, 300))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-md border border-teal-200 transition-colors"
+                        title="Mở câu hỏi này trực tiếp trên ChatGPT.com"
+                      >
+                        <span>Mở trên ChatGPT.com</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </>
                   )}
                 </div>
 

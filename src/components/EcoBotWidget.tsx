@@ -11,6 +11,7 @@ import {
   Trash2,
   RotateCcw,
   MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -120,9 +121,21 @@ export default function EcoBotWidget() {
                 >
                   {msg.text}
                 </div>
-                <span className="text-[10px] text-slate-400 px-1 mt-0.5">
-                  {msg.timestamp}
-                </span>
+                <div className="flex flex-wrap items-center gap-1.5 px-1 mt-0.5 text-[10px] text-slate-400">
+                  <span>{msg.timestamp}</span>
+                  {msg.sender === 'bot' && (
+                    <a
+                      href={msg.chatGptWebUrl || `https://chatgpt.com/?q=${encodeURIComponent(msg.text.slice(0, 300))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-1.5 py-0.2 rounded border border-teal-200 transition-colors"
+                      title="Mở trên ChatGPT.com"
+                    >
+                      <span>chatgpt.com</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
 
                 {/* Suggestions pill */}
                 {msg.suggestions && msg.suggestions.length > 0 && (
