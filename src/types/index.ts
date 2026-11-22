@@ -140,6 +140,7 @@ export interface ChatMessage {
   sender: 'user' | 'bot';
   text: string;
   timestamp: string;
+  imageAttachment?: string;
   suggestions?: string[];
   scanItemAttachment?: ScanResult;
   datasetContextReference?: string;

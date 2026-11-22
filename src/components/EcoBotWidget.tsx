@@ -13,14 +13,18 @@ import {
   RotateCcw,
   MessageSquare,
   ExternalLink,
+  Image as ImageIcon,
+  Key,
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EcoBotWidget() {
-  const { chatMessages, sendChatMessage, clearChat } = useEcoStore();
+  const { chatMessages, sendChatMessage, clearChat, geminiApiKey, openaiApiKey, chatModel, aiProvider } = useEcoStore();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,14 +33,41 @@ export default function EcoBotWidget() {
     }
   }, [chatMessages, isOpen]);
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setSelectedImage(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || input;
-    if (!text.trim() || loading) return;
+    if ((!text.trim() && !selectedImage) || loading) return;
 
+    const imgToSend = selectedImage;
     setInput('');
+    setSelectedImage(null);
     setLoading(true);
-    await sendChatMessage(text);
+    await sendChatMessage(
+      text.trim() || 'Hãy phân tích hình ảnh này và cho biết 5 thông tin cốt lõi về phân loại & tái chế rác.',
+      undefined,
+      imgToSend || undefined
+    );
     setLoading(false);
+  };
+
+  const getProviderBadge = () => {
+    if (aiProvider === 'gemini' && geminiApiKey) return 'Gemini Vision';
+    if (aiProvider === 'chatgpt' && openaiApiKey) return 'ChatGPT';
+    if (geminiApiKey) return 'Gemini Vision';
+    if (openaiApiKey) return 'ChatGPT';
+    return 'EcoBot Free';
   };
 
   return (
@@ -46,7 +77,7 @@ export default function EcoBotWidget() {
         <button
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-6 z-50 p-3.5 sm:p-4 rounded-3xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-forest-800 text-white shadow-2xl shadow-emerald-500/40 hover:scale-105 active:scale-95 transition-all group flex items-center gap-2.5 border-2 border-white/40"
-          title="Trò chuyện với EcoBot AI"
+          title="Trò chuyện với EcoBot AI (Gemini Vision / ChatGPT)"
         >
           <div className="relative">
             <Bot className="w-6 h-6 animate-pulse" />
@@ -60,7 +91,7 @@ export default function EcoBotWidget() {
 
       {/* Floating Chat Modal */}
       {isOpen && (
-        <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-96 h-[520px] max-h-[85vh] bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-emerald-100 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-96 h-[540px] max-h-[85vh] bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-emerald-100 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
           <div className="p-4 bg-gradient-to-r from-emerald-700 via-teal-700 to-forest-900 text-white flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2.5">
@@ -71,11 +102,11 @@ export default function EcoBotWidget() {
                 <h4 className="font-bold text-sm leading-tight flex items-center gap-1.5">
                   EcoBot AI
                   <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20 text-emerald-100 font-normal">
-                    ChatGPT
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/20 text-emerald-100 font-semibold">
+                    {getProviderBadge()}
                   </span>
                 </h4>
-                <p className="text-[10px] text-emerald-200">Trợ lý phân loại & tái chế rác 24/7</p>
+                <p className="text-[10px] text-emerald-200">Trợ lý phân loại, tái chế & Vision 24/7</p>
               </div>
             </div>
 
@@ -83,7 +114,7 @@ export default function EcoBotWidget() {
               <Link
                 href="/chatbot"
                 onClick={() => setIsOpen(false)}
-                title="Mở toàn màn hình"
+                title="Cấu hình Gemini Vision & Mở toàn màn hình"
                 className="p-1.5 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
               >
                 <Maximize2 className="w-4 h-4" />
@@ -120,6 +151,13 @@ export default function EcoBotWidget() {
                       : 'bg-slate-100 text-slate-800 rounded-tl-none border border-slate-200/80'
                   }`}
                 >
+                  {msg.imageAttachment && (
+                    <img
+                      src={msg.imageAttachment}
+                      alt="Ảnh đã gửi"
+                      className="max-w-[200px] max-h-[140px] object-cover rounded-xl border border-white/20 mb-2 shadow-xs"
+                    />
+                  )}
                   <FormattedChatMessage content={msg.text} isUser={msg.sender === 'user'} />
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 px-1 mt-0.5 text-[10px] text-slate-400">
@@ -156,13 +194,40 @@ export default function EcoBotWidget() {
             ))}
 
             {loading && (
-              <div className="flex items-center gap-2 text-xs text-emerald-700 p-2 bg-emerald-50 rounded-xl max-w-[70%] animate-pulse">
+              <div className="flex items-center gap-2 text-xs text-emerald-700 p-2 bg-emerald-50 rounded-xl max-w-[70%] animate-pulse border border-emerald-200">
                 <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                <span>EcoBot đang suy nghĩ giải đáp...</span>
+                <span>
+                  {aiProvider === 'gemini' && geminiApiKey
+                    ? 'Gemini Vision đang phân tích...'
+                    : 'EcoBot đang suy nghĩ giải đáp...'}
+                </span>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Attached image preview */}
+          {selectedImage && (
+            <div className="px-3 py-1.5 bg-emerald-50 border-t border-emerald-100 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <img
+                  src={selectedImage}
+                  alt="Ảnh đã chọn"
+                  className="w-8 h-8 object-cover rounded-lg border border-emerald-300"
+                />
+                <span className="text-[11px] font-semibold text-emerald-900">
+                  Đã đính kèm ảnh
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedImage(null)}
+                className="text-rose-600 hover:bg-rose-100 p-1 rounded"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Input Footer */}
           <form
@@ -170,20 +235,36 @@ export default function EcoBotWidget() {
               e.preventDefault();
               handleSend();
             }}
-            className="p-3 border-t border-slate-200/90 bg-white flex items-center gap-2"
+            className="p-2.5 sm:p-3 border-t border-slate-200/90 bg-white flex items-center gap-1.5"
           >
             <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageSelect}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-600 hover:text-teal-700 border border-slate-200 shrink-0"
+              title="Đính kèm ảnh để Gemini Vision xem"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+            </button>
+
+            <input
               type="text"
-              placeholder="Hỏi về cách phân loại, tái chế, compost..."
+              placeholder={selectedImage ? 'Nhập câu hỏi kèm ảnh...' : 'Hỏi về rác, cách phân loại, tái chế...'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={loading}
-              className="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50"
+              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50"
             />
             <button
               type="submit"
-              disabled={!input.trim() || loading}
-              className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white transition-all shadow-xs"
+              disabled={(!input.trim() && !selectedImage) || loading}
+              className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white transition-all shadow-xs shrink-0"
             >
               <Send className="w-4 h-4" />
             </button>

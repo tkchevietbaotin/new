@@ -43,6 +43,8 @@ interface EcoStoreContextType {
   setOpenaiApiKey: (key: string) => void;
   chatModel: string;
   setChatModel: (model: string) => void;
+  aiProvider: 'gemini' | 'chatgpt' | 'ecobot';
+  setAiProvider: (provider: 'gemini' | 'chatgpt' | 'ecobot') => void;
   login: (userOrEmail: string) => void;
   logout: () => void;
   switchUser: (userId: string) => void;
@@ -53,7 +55,7 @@ interface EcoStoreContextType {
   claimChallenge: (challengeId: string) => void;
   updateUserBio: (bio: string) => void;
   // New features:
-  sendChatMessage: (text: string, scanItemAttachment?: ScanResult) => Promise<void>;
+  sendChatMessage: (text: string, scanItemAttachment?: ScanResult, imageAttachment?: string) => Promise<void>;
   clearChat: () => void;
   addLocation: (loc: Omit<EcoLocation, 'id'>) => void;
   addAlert: (alert: Omit<EcoAlert, 'id' | 'reportedAt' | 'upvotes' | 'volunteersJoined'>) => void;
@@ -79,6 +81,7 @@ const STORAGE_KEYS = {
   API_KEY: 'ecoscan_gemini_key',
   OPENAI_KEY: 'ecoscan_openai_key',
   CHAT_MODEL: 'ecoscan_chat_model',
+  AI_PROVIDER: 'ecoscan_ai_provider',
 };
 
 function normalizeVietnamese(str: string): string {
@@ -379,7 +382,8 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<GreenEvent[]>(INITIAL_EVENTS);
   const [geminiApiKey, setGeminiApiKeyState] = useState<string>('');
   const [openaiApiKey, setOpenaiApiKeyState] = useState<string>('');
-  const [chatModel, setChatModelState] = useState<string>('gpt-4o-mini');
+  const [chatModel, setChatModelState] = useState<string>('gemini-1.5-flash');
+  const [aiProvider, setAiProviderState] = useState<'gemini' | 'chatgpt' | 'ecobot'>('gemini');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -420,6 +424,9 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
 
       const savedModel = localStorage.getItem(STORAGE_KEYS.CHAT_MODEL);
       if (savedModel) setChatModelState(savedModel);
+
+      const savedProvider = localStorage.getItem(STORAGE_KEYS.AI_PROVIDER);
+      if (savedProvider) setAiProviderState(savedProvider as any);
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
@@ -447,6 +454,15 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
     setChatModelState(model);
     try {
       localStorage.setItem(STORAGE_KEYS.CHAT_MODEL, model);
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const setAiProvider = (provider: 'gemini' | 'chatgpt' | 'ecobot') => {
+    setAiProviderState(provider);
+    try {
+      localStorage.setItem(STORAGE_KEYS.AI_PROVIDER, provider);
     } catch (e) {
       console.warn(e);
     }
@@ -741,13 +757,18 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Chatbot methods
-  const sendChatMessage = async (text: string, scanItemAttachment?: ScanResult) => {
+  const sendChatMessage = async (
+    text: string,
+    scanItemAttachment?: ScanResult,
+    imageAttachment?: string
+  ) => {
     const userMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
       sender: 'user',
       text,
       timestamp: 'Vừa xong',
       scanItemAttachment,
+      imageAttachment,
     };
 
     setChatMessages((prev) => [...prev, userMsg]);
@@ -757,7 +778,7 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
       : `Hỏi về phân loại và tái chế rác thải: ${text}`;
     const chatGptWebUrl = `https://chatgpt.com/?q=${encodeURIComponent(chatGptQuery)}`;
 
-    // Try calling server api /api/chat with ChatGPT (OpenAI) or Gemini or EcoBot
+    // Try calling server api /api/chat with Gemini Vision or ChatGPT
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -771,7 +792,9 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
           openaiApiKey,
           geminiApiKey,
           model: chatModel,
+          provider: aiProvider,
           scanItemAttachment,
+          imageAttachment,
         }),
       });
 
@@ -788,7 +811,7 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
               'Làm sao phân loại pin cũ?',
               'Cách làm phân compost tại nhà?'
             ],
-            aiProvider: data.aiProvider || (openaiApiKey ? 'chatgpt' : 'ecobot'),
+            aiProvider: data.aiProvider || (geminiApiKey ? 'gemini' : openaiApiKey ? 'chatgpt' : 'ecobot'),
             model: data.model || chatModel,
             chatGptWebUrl,
           };
@@ -809,8 +832,8 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
       text: reply,
       timestamp: 'Vừa xong',
       suggestions,
-      aiProvider: 'ecobot',
-      model: 'ChatGPT-Grounded EcoBot',
+      aiProvider: geminiApiKey ? 'gemini' : openaiApiKey ? 'chatgpt' : 'ecobot',
+      model: geminiApiKey ? 'Gemini 1.5 Flash Vision' : 'Dataset-Grounded EcoBot',
       chatGptWebUrl,
     };
     setChatMessages((prev) => [...prev, botMsg]);
@@ -922,6 +945,8 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
         setOpenaiApiKey,
         chatModel,
         setChatModel,
+        aiProvider,
+        setAiProvider,
         login,
         logout,
         switchUser,
