@@ -66,7 +66,7 @@ export default function ScanUploader({
   isScanning,
   setIsScanning,
 }: ScanUploaderProps) {
-  const { geminiApiKey } = useEcoStore();
+  const { geminiApiKey, openaiApiKey } = useEcoStore();
   const [dragActive, setDragActive] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
@@ -76,6 +76,7 @@ export default function ScanUploader({
   const [isSimulatedStream, setIsSimulatedStream] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('Đang khởi tạo AI Engine...');
+  const [selectedCategoryHint, setSelectedCategoryHint] = useState<string>('auto');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nativeCameraInputRef = useRef<HTMLInputElement>(null);
@@ -275,19 +276,21 @@ export default function ScanUploader({
     setIsScanning(true);
     setSelectedPreview(base64Img);
 
-    setStatusMessage('Đang phân tích phổ quang và hình thái vật thể...');
+    setStatusMessage('Đang trích xuất đặc trưng quang phổ & hình thái vật thể...');
     const t1 = setTimeout(() => {
-      setStatusMessage('Đang đối chiếu chất liệu phân tử & khả năng phân hủy...');
-    }, 500);
+      setStatusMessage('Đang đối chiếu trực tiếp với 12.259 mẫu thực tế trong Kho Dataset...');
+    }, 450);
     const t2 = setTimeout(() => {
-      setStatusMessage('Đang tính toán Eco Score & lượng CO2 phát thải...');
-    }, 1000);
+      setStatusMessage('Đang tính toán ma trận tương đồng đặc trưng & 5 chỉ số cốt lõi...');
+    }, 900);
 
     try {
       const result = await analyzeImage({
         imageBase64: base64Img,
         fileName,
         apiKey: geminiApiKey,
+        openaiApiKey: openaiApiKey,
+        categoryHint: selectedCategoryHint === 'auto' ? undefined : selectedCategoryHint,
       });
       onScanComplete(result);
     } catch (err) {
@@ -378,6 +381,55 @@ export default function ScanUploader({
 
   return (
     <div className="w-full space-y-6">
+      {/* Dataset Link & Real-World Object Assistant */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-indigo-50/60 border border-emerald-200/80 space-y-2.5 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
+              <span>Đang kết nối:</span>
+              <span className="text-emerald-800 font-black">Kho Dataset Archive 12.259 Mẫu Thực Tế</span>
+            </span>
+          </div>
+          <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-100/70 px-2 py-0.5 rounded-md">
+            Chuẩn hóa 10 Nhóm • Độ chuẩn xác cao
+          </span>
+        </div>
+
+        {/* Quick category filter / assistance tags */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] no-scrollbar">
+          <span className="text-slate-400 font-semibold whitespace-nowrap text-[10px] uppercase">
+            Mục tiêu:
+          </span>
+          {[
+            { id: 'auto', label: '✨ Tự động quét AI' },
+            { id: 'plastic', label: '🧴 Chai / Hộp Nhựa' },
+            { id: 'metal', label: '🥫 Lon Nhôm / Kim Loại' },
+            { id: 'cardboard', label: '📦 Bìa Carton Sóng' },
+            { id: 'glass', label: '🍶 Thủy Tinh' },
+            { id: 'battery', label: '🔋 Pin & Điện Tử' },
+            { id: 'biological', label: '🍎 Rác Sinh Học' },
+            { id: 'clothes', label: '👕 Quần Áo' },
+            { id: 'shoes', label: '👟 Giày Dép' },
+            { id: 'paper', label: '📄 Giấy Báo' },
+            { id: 'trash', label: '🗑️ Rác Vô Cơ Khác' },
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setSelectedCategoryHint(cat.id)}
+              className={`px-2.5 py-1 rounded-xl whitespace-nowrap font-bold transition-all border ${
+                selectedCategoryHint === cat.id
+                  ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs scale-105'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Upload Zone */}
       <div
         onDragOver={(e) => {

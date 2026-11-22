@@ -1,9 +1,12 @@
 import { ScanResult, WasteCategory, RecyclabilityLevel } from '@/types';
+import { matchImageAgainstDataset } from './vision-dataset-matcher';
 
 export interface AIAnalysisRequest {
   imageBase64: string;
   fileName?: string;
   apiKey?: string;
+  openaiApiKey?: string;
+  categoryHint?: string;
 }
 
 export interface WasteCategoryCatalogItem {
@@ -438,19 +441,23 @@ export const DATASET_CATALOG_META: Record<string, WasteCategoryCatalogItem> = {
 };
 
 export async function analyzeImage(request: AIAnalysisRequest): Promise<ScanResult> {
-  const { imageBase64, fileName, apiKey } = request;
+  const { imageBase64, fileName, apiKey, openaiApiKey, categoryHint } = request;
 
-  // Try calling the Next.js API route first
+  // 1. Try calling the Next.js API route first (which connects to ChatGPT Vision / Gemini Vision)
   try {
     const res = await fetch('/api/scan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(apiKey ? { 'x-gemini-key': apiKey } : {}),
+        ...(openaiApiKey ? { 'x-openai-key': openaiApiKey } : {}),
       },
       body: JSON.stringify({
         image: imageBase64,
         fileName,
+        openaiApiKey,
+        geminiApiKey: apiKey,
+        categoryHint,
       }),
     });
 
@@ -486,24 +493,14 @@ export async function analyzeImage(request: AIAnalysisRequest): Promise<ScanResu
       }
     }
   } catch (err) {
-    console.warn('API /api/scan call bypassed or network issue, using Archive Dataset Model:', err);
+    console.warn('API /api/scan call bypassed or network issue, using Dataset Vision Engine:', err);
   }
 
-  // Smart Simulator fallback logic matching directly against the 10-Class dataset in /archive
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  // 2. Link directly with the 12,259 dataset archive via Computer Vision Feature Matcher
+  await new Promise((resolve) => setTimeout(resolve, 600));
 
-  const lowerName = (fileName || '').toLowerCase();
-  const catalogList = Object.values(DATASET_CATALOG_META);
-
-  let matched = catalogList.find((item) =>
-    item.keywords.some((kw) => lowerName.includes(kw))
-  );
-
-  // If not matched by filename, select realistic intelligent item
-  if (!matched) {
-    const index = Math.floor(Math.random() * catalogList.length);
-    matched = catalogList[index];
-  }
+  const matchResult = await matchImageAgainstDataset(imageBase64, fileName, categoryHint);
+  const matched = DATASET_CATALOG_META[matchResult.matchedCategory] || DATASET_CATALOG_META.plastic;
 
   return {
     id: `scan-${Date.now()}`,
@@ -524,13 +521,13 @@ export async function analyzeImage(request: AIAnalysisRequest): Promise<ScanResu
     decompositionTime: matched.decompositionTime,
     disposalGuide: matched.disposalGuide,
     upcyclingTips: matched.upcyclingTips,
-    confidence: +(0.94 + Math.random() * 0.05).toFixed(2),
+    confidence: matchResult.confidence,
     imageUrl: imageBase64,
     timestamp: 'Vừa xong',
     boundingBoxes: [
       {
         label: matched.itemName.split('/')[0].split('(')[0].trim(),
-        confidence: 0.98,
+        confidence: matchResult.confidence,
         box: [18, 22, 56, 62],
         color: '#10b981',
       },
@@ -549,15 +546,6 @@ export async function analyzeImage(request: AIAnalysisRequest): Promise<ScanResu
         color: '#f59e0b',
       },
     ],
-    datasetMatch: {
-      categoryKey: matched.key,
-      categoryNameVi: matched.nameVi,
-      totalDatasetSamples: matched.count,
-      matchScore: 0.97,
-      sampleImages: matched.sampleFiles.map((file) => ({
-        fileName: file,
-        imageUrl: `/api/dataset/image?category=${matched.key}&file=${file}&size=256`,
-      })),
-    },
+    datasetMatch: matchResult.datasetMatch,
   };
 }

@@ -19,7 +19,7 @@ import {
 import Link from 'next/link';
 
 export default function ScanPage() {
-  const { scans, addScanResult, geminiApiKey } = useEcoStore();
+  const { scans, addScanResult, geminiApiKey, openaiApiKey } = useEcoStore();
   const [currentResult, setCurrentResult] = useState<ScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -38,6 +38,7 @@ export default function ScanPage() {
             imageBase64: parsed.url,
             fileName: parsed.fileName,
             apiKey: geminiApiKey,
+            openaiApiKey: openaiApiKey,
           }).then((res) => {
             const saved = addScanResult(res);
             setCurrentResult(saved);
@@ -48,7 +49,7 @@ export default function ScanPage() {
     } catch (e) {
       console.warn(e);
     }
-  }, [geminiApiKey, addScanResult]);
+  }, [geminiApiKey, openaiApiKey, addScanResult]);
 
   const handleScanComplete = (result: ScanResult) => {
     // Add to global store & award points
@@ -68,13 +69,17 @@ export default function ScanPage() {
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
           <Sparkles className="w-3.5 h-3.5" />
           <span>AI Vision Studio 2026</span>
-          {geminiApiKey ? (
-            <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded-full font-bold">
-              Gemini 1.5 Active
+          {openaiApiKey ? (
+            <span className="text-[10px] bg-teal-600 text-white px-2 py-0.5 rounded-full font-bold">
+              ChatGPT Vision
+            </span>
+          ) : geminiApiKey ? (
+            <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
+              Gemini Vision
             </span>
           ) : (
-            <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
-              Dataset Catalog AI
+            <span className="text-[10px] bg-emerald-700 text-white px-2 py-0.5 rounded-full font-bold">
+              Kho Dataset Archive (12.259 mẫu)
             </span>
           )}
         </div>
