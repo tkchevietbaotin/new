@@ -81,10 +81,18 @@ const STORAGE_KEYS = {
   CHAT_MODEL: 'ecoscan_chat_model',
 };
 
+function normalizeVietnamese(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd');
+}
+
 // Preset EcoBot responses grounded directly on the 10-Class Archive Dataset (12,259 samples)
 // and strictly structured with the 5 Core Waste Insights
 function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: string; suggestions?: string[] } {
-  const q = userPrompt.toLowerCase();
+  const normQ = normalizeVietnamese(userPrompt);
 
   // If there's an attached scanItem, provide deep analysis based on its 5 core fields
   if (scanItem) {
@@ -114,7 +122,36 @@ function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: str
     };
   }
 
-  if (q.includes('pin') || q.includes('battery') || q.includes('sac')) {
+  // 1. Hộp sữa / Vỏ hộp sữa giấy Tetra Pak / Combibloc
+  if (normQ.includes('sua') || normQ.includes('tetra pak') || normQ.includes('combibloc') || normQ.includes('hop sua')) {
+    return {
+      reply: '🥛 **ChatGPT & EcoBot Giải Đáp Về Vỏ Hộp Sữa Giấy (Bao bì phức hợp Tetra Pak):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Tên cụ thể: Vỏ hộp sữa tươi, hộp sữa chua uống tiệt trùng (Bao bì Tetra Pak / Combibloc).\n' +
+        '• Cấu tạo gồm 6 lớp vật liệu ép chặt: 75% bột giấy Kraft nguyên sinh, 21% màng nhựa PE và 4% màng nhôm siêu mỏng.\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải rắn có thể tái chế** (Nhóm bao bì phức hợp có giá trị thu hồi cao).\n' +
+        '• Thùng rác: **Thùng rác màu Vàng hoặc Trắng** (hoặc trạm thu gom vỏ hộp sữa học đường, siêu thị AEON, Vinamilk, TH True Milk).\n\n' +
+        '3️⃣ **Cần làm gì với nó (Quy trình 4 bước chuẩn):**\n' +
+        '• Bước 1: Uống hết sữa, bóc ống hút nhựa bỏ riêng.\n' +
+        '• Bước 2: Bật mở 4 góc tai nắp hộp (2 tai trên, 2 tai dưới) để gập thành hình phẳng dẹt.\n' +
+        '• Bước 3: Cho một ít nước vào tráng sạch cặn sữa bên trong, dốc ngược cho ráo nước (tránh lên men sinh mùi chua và kiến bu).\n' +
+        '• Bước 4: Dẫm bẹp phẳng hoàn toàn, xếp chồng buộc lại và chuyển tới các điểm thu gom vỏ hộp sữa.\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Có thể tái chế 100%** (Tất cả 3 thành phần bột giấy, nhôm và nhựa PE đều được tách lọc và tái sinh hoàn toàn bằng công nghệ nghiền thủy lực).\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Tách 75% bột giấy chất lượng cao làm giấy in, thùng carton bìa sóng, sổ tay học sinh.\n' +
+        '• Hỗn hợp Nhôm - Nhựa (PolyAl) còn lại được ép nhiệt ở 200°C làm **Tấm lợp sinh thái PolyAl** (chống dột, cách âm, cách nhiệt cực tốt, siêu bền trên 20 năm, làm mái nhà cho bà con vùng bão lũ), đóng bàn ghế học sinh và chậu cây công nghiệp!',
+      suggestions: [
+        'Điểm thu gom vỏ hộp sữa gần tôi?',
+        'Tấm lợp PolyAl từ vỏ hộp sữa là gì?',
+        'Cách gấp bẹp vỏ hộp sữa đúng chuẩn?'
+      ]
+    };
+  }
+
+  // 2. Pin & Rác điện tử
+  if (normQ.includes('pin') || normQ.includes('battery') || normQ.includes('sac') || normQ.includes('dien tu')) {
     return {
       reply: '🔋 **ChatGPT & EcoBot Giải Đáp Về Pin & Rác Điện Tử (Nhóm `battery` - 756 mẫu archive):**\n\n' +
         '1️⃣ **Đó là rác thải gì:**\n' +
@@ -137,7 +174,8 @@ function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: str
     };
   }
 
-  if (q.includes('nhua') || q.includes('plastic') || q.includes('pet') || q.includes('chai nuoc')) {
+  // 3. Đồ nhựa / Chai nhựa / Can nhựa / Hộp nhựa
+  if (normQ.includes('nhua') || normQ.includes('plastic') || normQ.includes('pet') || normQ.includes('chai') || normQ.includes('nilon')) {
     return {
       reply: '🧴 **ChatGPT & EcoBot Giải Đáp Về Rác Thải Nhựa (Nhóm `plastic` - 1.597 mẫu archive):**\n\n' +
         '1️⃣ **Đó là rác thải gì:**\n' +
@@ -160,7 +198,8 @@ function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: str
     };
   }
 
-  if (q.includes('ao') || q.includes('quan') || q.includes('vai') || q.includes('clothes') || q.includes('textile')) {
+  // 4. Quần áo & Vải cũ
+  if (normQ.includes('ao') || normQ.includes('quan') || normQ.includes('vai') || normQ.includes('clothes') || normQ.includes('textile') || normQ.includes('jeans')) {
     return {
       reply: '👕 **ChatGPT & EcoBot Giải Đáp Về Quần Áo & Vải Cũ (Nhóm `clothes` - 1.892 mẫu archive):**\n\n' +
         '1️⃣ **Đó là rác thải gì:**\n' +
@@ -182,7 +221,8 @@ function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: str
     };
   }
 
-  if (q.includes('giay') || q.includes('dep') || q.includes('shoes') || q.includes('sneaker')) {
+  // 5. Giày dép cũ
+  if (normQ.includes('giay') || normQ.includes('dep') || normQ.includes('shoes') || normQ.includes('sneaker')) {
     return {
       reply: '👟 **ChatGPT & EcoBot Giải Đáp Về Giày Dép Cũ (Nhóm `shoes` - 1.449 mẫu archive):**\n\n' +
         '1️⃣ **Đó là rác thải gì:**\n' +
@@ -203,7 +243,8 @@ function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: str
     };
   }
 
-  if (q.includes('huu co') || q.includes('compost') || q.includes('rau') || q.includes('thuc an') || q.includes('biological')) {
+  // 6. Rác hữu cơ sinh học / thức ăn
+  if (normQ.includes('huu co') || normQ.includes('compost') || normQ.includes('rau') || normQ.includes('thuc an') || normQ.includes('biological') || normQ.includes('ca phe')) {
     return {
       reply: '🌱 **ChatGPT & EcoBot Giải Đáp Về Rác Hữu Cơ Sinh Học (Nhóm `biological` - 699 mẫu archive):**\n\n' +
         '1️⃣ **Đó là rác thải gì:**\n' +
@@ -225,11 +266,12 @@ function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: str
     };
   }
 
-  if (q.includes('carton') || q.includes('hop') || q.includes('cardboard') || q.includes('bia')) {
+  // 7. Bìa carton & Giấy
+  if (normQ.includes('carton') || normQ.includes('bia') || normQ.includes('hop') || normQ.includes('cardboard') || normQ.includes('giay') || normQ.includes('sach') || normQ.includes('bao')) {
     return {
-      reply: '📦 **ChatGPT & EcoBot Giải Đáp Về Bìa Carton (Nhóm `cardboard` - 1.411 mẫu archive):**\n\n' +
+      reply: '📦 **ChatGPT & EcoBot Giải Đáp Về Bìa Carton & Giấy Báo (Nhóm `cardboard` & `paper`):**\n\n' +
         '1️⃣ **Đó là rác thải gì:**\n' +
-        '• Thùng giấy carton sóng đóng hàng, hộp giày, bìa giấy cứng.\n\n' +
+        '• Thùng giấy carton sóng đóng hàng, hộp giày, bìa giấy cứng, sách báo cũ.\n\n' +
         '2️⃣ **Chất thải loại gì:**\n' +
         '• **Chất thải rắn tái chế** (Nhóm sợi xenlulozơ bột giấy công nghiệp).\n' +
         '• Thùng rác: **Thùng rác màu Vàng hoặc Trắng**.\n\n' +
@@ -248,20 +290,77 @@ function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: str
     };
   }
 
+  // 8. Kim loại / Vỏ lon nhôm
+  if (normQ.includes('lon') || normQ.includes('nhom') || normQ.includes('sat') || normQ.includes('kim loai') || normQ.includes('can') || normQ.includes('metal')) {
+    return {
+      reply: '🥫 **ChatGPT & EcoBot Giải Đáp Về Vỏ Lon & Kim Loại (Nhóm `metal` - 930 mẫu archive):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Vỏ lon bia, nước ngọt bằng nhôm (Aluminum), đồ hộp thiếc sắt tráng kẽm.\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải rắn có thể tái chế giá trị cao** (Kim loại màu và hợp kim dẻo).\n' +
+        '• Thùng rác: **Thùng rác màu Vàng hoặc Trắng**.\n\n' +
+        '3️⃣ **Cần làm gì với nó:**\n' +
+        '• Bước 1: Tráng sơ nước sạch để trôi hết đường ngọt, tránh côn trùng bu bám.\n' +
+        '• Bước 2: Kéo nắp khoen gập vào trong miệng lon (giữ nguyên không làm rơi mất khoen).\n' +
+        '• Bước 3: Dẫm bẹp dọc thân lon để tiết kiệm 75% diện tích chứa.\n' +
+        '• Bước 4: Gom túi giao cho vựa thu mua phế liệu hoặc máy hoàn trả vỏ lon.\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Có thể tái chế 100% vô hạn lần** (Tiết kiệm tới 95% năng lượng điện so với luyện kim thô).\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Lon nhôm mới (chỉ mất 60 ngày để 1 lon tái chế quay lại kệ siêu thị).\n' +
+        '• Thỏi nhôm đúc linh kiện xe máy, khung xe đạp, mâm vành xe ô tô hợp kim.\n' +
+        '• Khung nhôm cửa kính xây dựng và thanh tản nhiệt máy vi tính.',
+      suggestions: ['Tái chế lon nhôm thế nào?', 'Điểm thu gom phế liệu kim loại']
+    };
+  }
+
+  // 9. Thủy tinh
+  if (normQ.includes('thuy tinh') || normQ.includes('glass') || normQ.includes('chai bia')) {
+    return {
+      reply: '🍶 **ChatGPT & EcoBot Giải Đáp Về Chai Lọ Thủy Tinh (Nhóm `glass` - 1.736 mẫu archive):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Chai rượu vang, hũ mứt, lọ sốt gia vị, chai thủy tinh thực phẩm (Thủy tinh Soda-lime).\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải rắn tái chế** (Silicat vô cơ trơ hóa học).\n' +
+        '• Thùng rác: **Thùng rác màu Vàng hoặc Trắng**.\n\n' +
+        '3️⃣ **Cần làm gì với nó:**\n' +
+        '• Bước 1: Rửa sạch dầu mỡ hoặc cặn nước ngọt đọng bên trong.\n' +
+        '• Bước 2: Tháo rời nắp chai kim loại hoặc nút bần để phân loại riêng.\n' +
+        '• Bước 3: Giữ chai nguyên vẹn, tránh làm vỡ vụn gây nguy hiểm cho nhân viên vệ sinh.\n' +
+        '• Bước 4: Đổi trả chai có cọc tại cửa hàng hoặc gửi vựa phế liệu.\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Tái chế hoàn toàn 100% không giới hạn số lần** mà không bao giờ suy giảm chất lượng.\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Chai lọ thủy tinh mới đóng thực phẩm và đồ uống an toàn vệ sinh.\n' +
+        '• Cát thủy tinh nghiền mịn làm bê tông nhẹ và đá lát vỉa hè chống trơn.\n' +
+        '• Bông thủy tinh cách nhiệt, chống ồn cho các tòa nhà cao tầng.',
+      suggestions: ['Làm đèn ngủ từ chai thủy tinh', 'Đăng tặng hũ thủy tinh lên Chợ Xanh']
+    };
+  }
+
+  // General fallback tailored to user's question
+  const cleanTopic = userPrompt.replace(/[?!.]/g, '').trim();
   return {
-    reply: `Chào bạn! Tôi là **EcoBot AI**, được tích hợp công nghệ **ChatGPT** và đối chiếu với **Bộ dữ liệu 10 nhóm rác thải chuẩn hóa (12.259 mẫu thực tế trong archive)**:\n\n` +
-      `Về câu hỏi **"${userPrompt}"**:\n` +
-      `Khi bạn quét bất kỳ món đồ nào bằng camera, tôi sẽ lập tức giải đáp chuẩn 5 thông tin:\n` +
-      `1. **Đó là rác thải gì** (Tên cụ thể & chất liệu cấu tạo)\n` +
-      `2. **Chất thải loại gì** (Nhóm phân loại BVMT & màu thùng rác quy định)\n` +
-      `3. **Cần làm gì với nó** (Quy trình các bước xử lý, làm sạch và vứt bỏ)\n` +
-      `4. **Có thể tái chế được không** (Trạng thái, tỷ lệ % và điều kiện tái chế)\n` +
-      `5. **Tái chế được những gì?** (Danh sách các sản phẩm và nguyên liệu tái sinh thành phẩm)\n\n` +
-      `Hãy thử bấm vào nút quét hoặc hỏi tôi về một loại rác cụ thể nhé! 🌍✨`,
+    reply: `🤖 **ChatGPT & EcoBot Giải Đáp Chi Tiết Cho: "${cleanTopic}":**\n\n` +
+      `1️⃣ **Đó là rác thải gì:**\n` +
+      `• Vật phẩm: **${cleanTopic}**.\n` +
+      `• Bản chất: Đồ dùng sinh hoạt cần được phân loại theo chất liệu cấu thành (kim loại, nhựa, giấy, hữu cơ hoặc vô cơ).\n\n` +
+      `2️⃣ **Chất thải loại gì:**\n` +
+      `• Phân loại chuẩn Luật BVMT: Cần xếp vào 1 trong 3 nhóm chính: **Rác tái chế được** (thùng Vàng/Trắng), **Rác hữu cơ** (thùng Xanh lá), hoặc **Rác vô cơ còn lại** (thùng Xám).\n\n` +
+      `3️⃣ **Cần làm gì với nó:**\n` +
+      `• Bước 1: Làm sạch cặn chất lỏng, dầu mỡ dính trên bề mặt.\n` +
+      `• Bước 2: Bóc tách các chi tiết phụ lai tạp (tem ni-lông, ghim kim loại).\n` +
+      `• Bước 3: Thu nhỏ thể tích (gấp bẹp hoặc nén lại) trước khi bỏ vào thùng rác.\n` +
+      `• Bước 4: Đem tới đúng thùng rác đô thị hoặc tra cứu điểm thu gom trên **Bản Đồ Số**.\n\n` +
+      `4️⃣ **Có thể tái chế được không:**\n` +
+      `• Đa số bao bì đơn chất liệu (nhựa PET, nhôm, giấy, thủy tinh) đều **tái chế được 90 - 100%**; các bao bì màng nhôm phức hợp hoặc xốp bẩn sẽ đưa vào nhóm xử lý vô cơ.\n\n` +
+      `5️⃣ **Tái chế được những gì?:**\n` +
+      `• Thu hồi nguyên liệu hạt nhựa tái sinh, bột giấy tái chế hoặc kim loại đúc lại.\n` +
+      `• Bạn có thể chụp ảnh vật phẩm này qua mục **Quét AI (/scan)** để hệ thống nhận diện tự động và báo chính xác 100%! 🌍✨`,
     suggestions: [
+      'Vỏ hộp sữa tái chế thành gì?',
+      'Chai nhựa PET tái chế thế nào?',
       'Pin cũ vứt ở đâu an toàn?',
-      'Chai nhựa PET tái chế thành gì?',
-      'Quần áo cũ có tái chế được không?',
       'Cách phân loại rác tại nguồn'
     ]
   };

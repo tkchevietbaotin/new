@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useEcoStore } from '@/lib/store';
+import FormattedChatMessage from '@/components/ChatMessageFormatter';
 import {
   Bot,
   Send,
@@ -198,13 +199,13 @@ export default function ChatbotPage() {
                   )}
 
                   <div
-                    className={`rounded-2xl p-4 shadow-xs whitespace-pre-line leading-relaxed text-xs sm:text-sm ${
+                    className={`rounded-2xl p-4 shadow-xs leading-relaxed text-xs sm:text-sm ${
                       msg.sender === 'user'
                         ? 'bg-emerald-600 text-white rounded-tr-none ml-auto'
                         : 'bg-white text-slate-800 rounded-tl-none border border-slate-200/80 shadow-xs'
                     }`}
                   >
-                    {msg.text}
+                    <FormattedChatMessage content={msg.text} isUser={msg.sender === 'user'} />
                   </div>
                 </div>
 

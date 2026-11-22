@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useEcoStore } from '@/lib/store';
+import FormattedChatMessage from '@/components/ChatMessageFormatter';
 import {
   Bot,
   X,
@@ -113,13 +114,13 @@ export default function EcoBotWidget() {
                 }`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3 shadow-xs whitespace-pre-line leading-relaxed ${
+                  className={`max-w-[85%] rounded-2xl p-3 shadow-xs leading-relaxed ${
                     msg.sender === 'user'
                       ? 'bg-emerald-600 text-white rounded-tr-none'
                       : 'bg-slate-100 text-slate-800 rounded-tl-none border border-slate-200/80'
                   }`}
                 >
-                  {msg.text}
+                  <FormattedChatMessage content={msg.text} isUser={msg.sender === 'user'} />
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 px-1 mt-0.5 text-[10px] text-slate-400">
                   <span>{msg.timestamp}</span>
