@@ -39,6 +39,10 @@ interface EcoStoreContextType {
   events: GreenEvent[];
   geminiApiKey: string;
   setGeminiApiKey: (key: string) => void;
+  openaiApiKey: string;
+  setOpenaiApiKey: (key: string) => void;
+  chatModel: string;
+  setChatModel: (model: string) => void;
   login: (userOrEmail: string) => void;
   logout: () => void;
   switchUser: (userId: string) => void;
@@ -73,97 +77,192 @@ const STORAGE_KEYS = {
   MARKETPLACE: 'ecoscan_marketplace',
   EVENTS: 'ecoscan_events',
   API_KEY: 'ecoscan_gemini_key',
+  OPENAI_KEY: 'ecoscan_openai_key',
+  CHAT_MODEL: 'ecoscan_chat_model',
 };
 
 // Preset EcoBot responses grounded directly on the 10-Class Archive Dataset (12,259 samples)
-function getBotResponse(userPrompt: string): { reply: string; suggestions?: string[] } {
+// and strictly structured with the 5 Core Waste Insights
+function getBotResponse(userPrompt: string, scanItem?: ScanResult): { reply: string; suggestions?: string[] } {
   const q = userPrompt.toLowerCase();
 
-  if (q.includes('pin') || q.includes('battery')) {
+  // If there's an attached scanItem, provide deep analysis based on its 5 core fields
+  if (scanItem) {
     return {
-      reply: '🔋 **Phân loại Pin & Rác Điện Tử (Đối chiếu nhóm `battery` - 756 mẫu thực tế trong Dataset Archive):**\n\n' +
-        '1. **Nguy hại cao:** Pin chứa kim loại nặng độc hại (Chì, Cadmium, Thủy ngân). 1 viên pin cúc áo bị rò rỉ có thể làm ô nhiễm 500 lít nước ngầm trong 50 năm.\n' +
-        '2. **Cách xử lý chuẩn:** Dán băng dính vào 2 cực (+ và -), đựng trong hũ thủy tinh kín và mang tới điểm thu gom miễn phí (VinMart+, Circle K, ĐH Bách Khoa trên mục **Bản Đồ Số**).\n' +
-        '3. **Giải pháp xanh:** Chuyển sang sử dụng pin sạc NiMH để tái sử dụng tới 1.000 lần.',
-      suggestions: ['Mở bản đồ tìm điểm thu gom pin', 'Pin lithium-ion điện thoại xử lý thế nào?']
+      reply: `🤖 **Phân tích chi tiết từ ChatGPT & EcoBot AI cho món đồ "${scanItem.itemName}":**\n\n` +
+        `1️⃣ **Đó là rác thải gì:**\n` +
+        `• Tên cụ thể: **${scanItem.wasteName || scanItem.itemName}**\n` +
+        `• Chất liệu chính: ${scanItem.materialType}\n` +
+        `• Đối chiếu kho dữ liệu archive: Nhóm **${scanItem.categoryNameVi}** (${scanItem.datasetMatch ? `${scanItem.datasetMatch.totalDatasetSamples.toLocaleString()} mẫu thực tế` : 'Bộ dữ liệu 10 nhóm'})\n\n` +
+        `2️⃣ **Chất thải loại gì:**\n` +
+        `• Phân loại chuẩn BVMT: **${scanItem.wasteClassification || 'Chất thải rắn có thể tái chế'}**\n` +
+        `• Thùng rác quy định: **${scanItem.wasteBinColor || 'Thùng rác tái chế màu Vàng / Trắng'}**\n\n` +
+        `3️⃣ **Cần làm gì với nó (Quy trình xử lý đúng chuẩn):**\n` +
+        (scanItem.actionGuide || scanItem.disposalGuide || []).map((step, idx) => `• ${step}`).join('\n') + '\n\n' +
+        `4️⃣ **Có thể tái chế được không:**\n` +
+        `• Trạng thái: **${scanItem.recyclabilityStatus || (scanItem.canRecycle ? 'Có thể tái chế hoàn toàn (90 - 100%)' : 'Không thể tái chế thông thường')}**\n` +
+        `• Điểm Eco Score: **${scanItem.ecoScore}/100** | Thời gian phân hủy: ${scanItem.decompositionTime}\n\n` +
+        `5️⃣ **Tái chế được những gì?:**\n` +
+        (scanItem.recyclingProducts && scanItem.recyclingProducts.length > 0
+          ? scanItem.recyclingProducts.map((p) => `• 🔄 ${p}`).join('\n')
+          : '• Thu hồi nguyên liệu hạt tái sinh phục vụ chuỗi cung ứng kinh tế tuần hoàn.'),
+      suggestions: [
+        'Điểm thu gom gần nhất ở đâu?',
+        'Cách tái chế sáng tạo DIY tại nhà?',
+        'Thời gian phân hủy ngoài bãi rác?'
+      ]
+    };
+  }
+
+  if (q.includes('pin') || q.includes('battery') || q.includes('sac')) {
+    return {
+      reply: '🔋 **ChatGPT & EcoBot Giải Đáp Về Pin & Rác Điện Tử (Nhóm `battery` - 756 mẫu archive):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Tên rác: Pin tiểu AA/AAA, Pin cúc áo, Pin Lithium-ion điện thoại, bình ắc quy chì.\n' +
+        '• Thành phần: Chứa kim loại nặng cực độc gồm Chì (Pb), Thủy ngân (Hg), Cadmium (Cd) và Axit.\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải nguy hại sinh hoạt** (Quy chuẩn phân loại chất thải nguy hại đô thị).\n' +
+        '• Thùng rác: **Thùng màu Đỏ** hoặc điểm thu gom rác điện tử chuyên biệt.\n\n' +
+        '3️⃣ **Cần làm gì với nó:**\n' +
+        '• Bước 1: Dán băng dính cách điện vào 2 cực (+ và -) của pin để chống chập cháy phát nổ.\n' +
+        '• Bước 2: Tích trữ trong lọ thủy tinh hoặc hộp nhựa khô ráo, đậy kín nắp.\n' +
+        '• Bước 3: Tuyệt đối không đốt, không vứt chung vào bãi rác sinh hoạt thông thường.\n' +
+        '• Bước 4: Đem tới các điểm thu hồi pin miễn phí trên **Bản Đồ Số** (VinMart+, Circle K, UBND phường).\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Không thể tái chế tại nhà** — Phải xử lý bằng quy trình nhiệt luyện và thủy luyện công nghiệp khép kín.\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Thu hồi 95% kim loại quý: Coban, Niken, Đồng và muối Lithium tinh khiết.\n' +
+        '• Tái chế thành bột Kẽm Oxit (ZnO) làm chất phụ gia cho ngành gốm sứ và sản xuất lốp xe.',
+      suggestions: ['Mở Bản Đồ Số tìm điểm nộp pin', 'Pin dự phòng hỏng xử lý thế nào?']
+    };
+  }
+
+  if (q.includes('nhua') || q.includes('plastic') || q.includes('pet') || q.includes('chai nuoc')) {
+    return {
+      reply: '🧴 **ChatGPT & EcoBot Giải Đáp Về Rác Thải Nhựa (Nhóm `plastic` - 1.597 mẫu archive):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Chai nước khoáng, can dầu ăn, hộp sữa chua (Nhựa PET #1, HDPE #2, PP #5).\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải rắn có thể tái chế** (Nhóm polymer nhiệt dẻo có giá trị kinh tế cao).\n' +
+        '• Thùng rác: **Thùng màu Vàng hoặc Trắng** (Dành riêng cho rác tái chế).\n\n' +
+        '3️⃣ **Cần làm gì với nó:**\n' +
+        '• Bước 1: Uống hết hoặc tráng sạch chất lỏng, dầu mỡ còn đọng lại bên trong.\n' +
+        '• Bước 2: Tháo nắp chai riêng và bóc nhãn màng co nilông bọc thân chai.\n' +
+        '• Bước 3: Dẫm bẹp hoặc vặn xoắn thân chai để tiết kiệm 70% không gian thùng chứa.\n' +
+        '• Bước 4: Cho vào túi gom phế liệu hoặc đổi điểm thưởng tại máy thu gom vỏ chai tự động.\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Có thể tái chế rất tốt (95 - 100%)** với chai PET #1 và can nhựa HDPE #2.\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Hạt nhựa tái sinh rPET đạt tiêu chuẩn sản xuất vỏ chai thực phẩm mới.\n' +
+        '• Kéo thành sợi xơ polyester dệt áo thể thao, balo du lịch và túi vải tote.\n' +
+        '• Đúc thành chậu hoa cây cảnh, khay chứa linh kiện công nghiệp, dây đai buộc hàng.',
+      suggestions: ['Làm chậu cây từ chai nhựa', 'Phân biệt nhựa #1 đến #7']
     };
   }
 
   if (q.includes('ao') || q.includes('quan') || q.includes('vai') || q.includes('clothes') || q.includes('textile')) {
     return {
-      reply: '👕 **Phân loại Quần Áo & Vải Cũ (Đối chiếu nhóm `clothes` - 1.892 mẫu trong Dataset Archive):**\n\n' +
-        '• **Tình trạng còn tốt (90-95%):** Đừng vứt đi! Hãy vào tab **"Chợ Xanh 0 Đồng"** trên ứng dụng để đăng cho/tặng hoặc gửi tới các tủ quần áo từ thiện.\n' +
-        '• **Vải rách / sờn cũ:** Cắt làm giẻ lau thấm nước gia đình hoặc gửi tới các đơn vị kéo sợi tái sinh làm bông cách âm, cách nhiệt.\n' +
-        '• **Tác động môi trường:** Tái sử dụng 1 chiếc áo thun cotton giúp tiết kiệm tới 2.700 lít nước sạch!',
-      suggestions: ['Đăng tặng quần áo lên Chợ Xanh', 'Cách tái chế ống quần jeans cũ làm túi']
+      reply: '👕 **ChatGPT & EcoBot Giải Đáp Về Quần Áo & Vải Cũ (Nhóm `clothes` - 1.892 mẫu archive):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Quần áo cũ, vải vụn, đồ may mặc gia đình từ sợi Cotton tự nhiên và sợi Polyester tổng hợp.\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải dệt may có thể tái sử dụng và tái sinh** (Kinh tế tuần hoàn thời trang).\n' +
+        '• Thu gom: **Tủ quần áo từ thiện / Chợ Xanh 0 Đồng** trên EcoScan AI.\n\n' +
+        '3️⃣ **Cần làm gì với nó:**\n' +
+        '• Bước 1: Giặt sạch và phơi thật khô ráo để khử mùi và ẩm mốc.\n' +
+        '• Bước 2: Phân loại: Đồ còn lành lặn hãy đăng tặng lên **Chợ Xanh 0 Đồng**.\n' +
+        '• Bước 3: Đồ rách nát: Cắt bỏ khóa kéo kim loại, cúc nhựa để chuyển tới xưởng tái chế.\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Có thể tái chế và tái sử dụng cao (85 - 90%)**.\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Kéo sợi dệt thảm trải sàn, giẻ lau công nghiệp siêu thấm.\n' +
+        '• Sản xuất các tấm bông cách âm cho xe hơi, tấm cách nhiệt chống nóng trong xây dựng.\n' +
+        '• Làm ruột nệm lót êm ái cho thú cưng hoặc may túi tote phong cách từ quần jeans cũ.',
+      suggestions: ['Đăng tặng đồ lên Chợ Xanh', 'May túi từ quần jeans cũ']
     };
   }
 
   if (q.includes('giay') || q.includes('dep') || q.includes('shoes') || q.includes('sneaker')) {
     return {
-      reply: '👟 **Phân loại Giày Dép Cũ (Đối chiếu nhóm `shoes` - 1.449 mẫu trong Dataset Archive):**\n\n' +
-        '• Giày thể thao cũ thường có cấu tạo phức tạp: đế xốp EVA, cao su lưu hóa, keo dán và da tổng hợp PU (cần 50 - 100 năm để phân hủy).\n' +
-        '• **Cách xử lý:** Tháo rời dây giày (dây giày giặt sạch dùng lại cực bền). Nếu giày còn êm, hãy vệ sinh sạch và quyên góp.\n' +
-        '• **Sáng tạo Upcycling:** Tận dụng thân giày cũ làm chậu trồng hoa mười giờ, sen đá độc đáo ngoài ban công!',
-      suggestions: ['Làm chậu cây từ giày cũ', 'Quyên góp giày thể thao']
+      reply: '👟 **ChatGPT & EcoBot Giải Đáp Về Giày Dép Cũ (Nhóm `shoes` - 1.449 mẫu archive):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Giày thể thao cũ, dép xốp EVA, giày da, sandal đế cao su tổng hợp.\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải thời trang phức hợp** (Hỗn hợp cao su lưu hóa, mút xốp EVA, da PU và keo dán dính).\n\n' +
+        '3️⃣ **Cần làm gì với nó:**\n' +
+        '• Bước 1: Tháo riêng dây giày (giặt sạch dùng làm dây buộc đồ siêu bền).\n' +
+        '• Bước 2: Gõ sạch bùn đất ở đế giày, lau khô.\n' +
+        '• Bước 3: Nếu còn dùng tốt, tặng lại cho người cần. Nếu rách hỏng, gửi tới dự án thu gom tái chế giày.\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Tái chế có điều kiện** (Cần máy nghiền cơ học tách đế cao su khỏi thân giày).\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Nghiền thành hạt cao su tái sinh làm lớp đệm giảm chấn cho sân chạy điền kinh và sân bóng cỏ nhân tạo.\n' +
+        '• Sản xuất gạch cao su lát sàn phòng tập gym chống sốc.\n' +
+        '• Làm đế giày bảo hộ lao động mới.',
+      suggestions: ['Làm chậu cây từ giày cũ', 'Điểm thu gom giày cũ']
+    };
+  }
+
+  if (q.includes('huu co') || q.includes('compost') || q.includes('rau') || q.includes('thuc an') || q.includes('biological')) {
+    return {
+      reply: '🌱 **ChatGPT & EcoBot Giải Đáp Về Rác Hữu Cơ Sinh Học (Nhóm `biological` - 699 mẫu archive):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Vỏ rau củ quả, bã cà phê, xác trà, thức ăn thừa không chứa dầu mỡ, lá cây khô.\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải hữu cơ dễ phân hủy sinh học** (Tạo mùn và dưỡng chất tự nhiên).\n' +
+        '• Thùng rác: **Thùng rác màu Xanh lá cây**.\n\n' +
+        '3️⃣ **Cần làm gì với nó:**\n' +
+        '• Bước 1: Chắt hết nước thừa, không để lẫn túi nilông hay tăm nhọn.\n' +
+        '• Bước 2: Cho vào thùng ủ compost gia đình hoặc đổ vào thùng rác xanh lá đô thị.\n' +
+        '• Bước 3: Rắc một lớp men vi sinh Bokashi hoặc bã cà phê khô để khử mùi và kích thích lên men.\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Có thể tái chế 100%** thành phân bón tự nhiên trong 3 - 4 tuần.\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Phân hữu cơ vi sinh compost giàu đạm (N) và kali (K) chăm sóc cây trồng xanh tốt.\n' +
+        '• Nước enzyme sinh học tẩy rửa sinh học an toàn từ vỏ dứa/vỏ cam.\n' +
+        '• Khí sinh học Biogas dùng làm chất đốt sạch.',
+      suggestions: ['Quy tắc ủ phân compost 50/50', 'Làm nước lau bếp từ vỏ cam']
     };
   }
 
   if (q.includes('carton') || q.includes('hop') || q.includes('cardboard') || q.includes('bia')) {
     return {
-      reply: '📦 **Phân loại Bìa Các-tông (Đối chiếu nhóm `cardboard` - 1.411 mẫu trong Dataset Archive):**\n\n' +
-        '• Bìa carton sóng có khả năng tái chế lên tới 100% thành bột giấy mới nếu được giữ khô ráo.\n' +
-        '• **Quy trình 3 bước:** Bóc toàn bộ băng keo dán nilông → Tháo ghim bấm kim loại → Gấp phẳng để tối ưu thể tích thu gom.\n' +
-        '• **Mẹo:** Bìa carton xé nhỏ là nguồn chất xơ Carbon (Nâu) tuyệt vời để trộn vào thùng ủ phân compost vi sinh gia đình!',
-      suggestions: ['Làm nhà cho mèo từ hộp carton', 'Quy tắc ủ phân compost 50/50']
-    };
-  }
-
-  if (q.includes('nhua') || q.includes('plastic') || q.includes('pet')) {
-    return {
-      reply: '🧴 **Phân loại Nhựa (Đối chiếu nhóm `plastic` - 1.597 mẫu trong Dataset Archive):**\n\n' +
-        '- **#1 PET** (Chai nước khoáng, nước ngọt): *Tái chế rất cao*. Nhớ tháo nắp và dẫm bẹp!\n' +
-        '- **#2 HDPE** (Bình sữa, can nước giặt): *Tái chế an toàn và bền bỉ*.\n' +
-        '- **#3 PVC** (Ống nước): *Chứa phụ gia clo độc, khó tái chế*.\n' +
-        '- **#4 LDPE** (Túi nilon, màng bọc): *Cần gom riêng các cơ sở chuyên biệt*.\n' +
-        '- **#5 PP** (Hộp cơm lò vi sóng, nắp chai): *Chịu nhiệt tốt, tái chế cao*.\n' +
-        '- **#6 PS** (Hộp xốp): *Không nên đựng đồ ăn nóng, hạn chế dùng*.',
-      suggestions: ['Làm chậu cây từ chai nhựa #1', 'Cách thay thế túi nilon']
-    };
-  }
-
-  if (q.includes('compost') || q.includes('huu co') || q.includes('rau') || q.includes('ca phe') || q.includes('biological')) {
-    return {
-      reply: '🌱 **Phân loại Rác Sinh Học / Hữu Cơ (Đối chiếu nhóm `biological` - 699 mẫu trong Dataset Archive):**\n\n' +
-        '1. **Quy tắc 50/50:** Trộn đều nguyên liệu **Xanh** (vỏ rau củ, bã cà phê, xác trà giàu Nitơ) với nguyên liệu **Nâu** (lá khô, bìa carton vụn giàu Carbon).\n' +
-        '2. **Tuyệt đối không bỏ vào:** Thịt cá mỡ, thức ăn dầu mỡ nhiều, phân thú cưng (dễ sinh mùi hôi).\n' +
-        '3. **Khử mùi:** Rắc bã cà phê phơi khô hoặc men vi sinh Bokashi / EM1 lên bề mặt.\n' +
-        'Sau 3 - 4 tuần, bạn sẽ có lớp phân mùn hữu cơ đen giàu dinh dưỡng cho vườn cây ban công!',
-      suggestions: ['Bã cà phê khử mùi thế nào?', 'Tham gia workshop ủ phân cuối tuần']
-    };
-  }
-
-  if (q.includes('thuy tinh') || q.includes('glass')) {
-    return {
-      reply: '🍶 **Phân loại Thủy Tinh (Đối chiếu nhóm `glass` - 1.736 mẫu trong Dataset Archive):**\n\n' +
-        '• Thủy tinh thực phẩm tái sinh 100% không giới hạn số lần mà không suy giảm chất lượng.\n' +
-        '• **Lưu ý:** Rửa sạch cặn thức ăn, tháo nắp kim loại/nhựa. Không vứt chung với kính xây dựng vỡ hay bóng đèn.\n' +
-        '• **Mẹo:** Đăng tặng hũ mứt, lọ thủy tinh sạch lên **Chợ Xanh 0 Đồng** cho những bạn làm nến thơm handmade.',
-      suggestions: ['Đăng tặng hũ thủy tinh lên Chợ Xanh', 'Làm đèn ngủ từ chai thủy tinh']
+      reply: '📦 **ChatGPT & EcoBot Giải Đáp Về Bìa Carton (Nhóm `cardboard` - 1.411 mẫu archive):**\n\n' +
+        '1️⃣ **Đó là rác thải gì:**\n' +
+        '• Thùng giấy carton sóng đóng hàng, hộp giày, bìa giấy cứng.\n\n' +
+        '2️⃣ **Chất thải loại gì:**\n' +
+        '• **Chất thải rắn tái chế** (Nhóm sợi xenlulozơ bột giấy công nghiệp).\n' +
+        '• Thùng rác: **Thùng rác màu Vàng hoặc Trắng**.\n\n' +
+        '3️⃣ **Cần làm gì với nó:**\n' +
+        '• Bước 1: Bóc sạch toàn bộ băng dính dán OPP và tem vận chuyển.\n' +
+        '• Bước 2: Đảm bảo bìa khô ráo, không dính dầu mỡ thực phẩm.\n' +
+        '• Bước 3: Rạch mở các góc và dẫm bẹp phẳng hoàn toàn để tiết kiệm thể tích.\n' +
+        '• Bước 4: Buộc thành kiện chuyển giao cho cơ sở thu gom phế liệu.\n\n' +
+        '4️⃣ **Có thể tái chế được không:**\n' +
+        '• **Có thể tái chế hoàn toàn (Tái chế được 5 - 7 vòng đời bột giấy)**.\n\n' +
+        '5️⃣ **Tái chế được những gì?:**\n' +
+        '• Thùng carton sóng đóng hàng mới đạt chuẩn xuất khẩu.\n' +
+        '• Khay định hình đựng trứng gà, khay đỡ ly cà phê mang đi.\n' +
+        '• Giấy kraft làm túi đựng đồ và bìa sổ tay thân thiện môi trường.',
+      suggestions: ['Làm đồ chơi từ bìa carton', 'Ủ phân compost từ bìa carton']
     };
   }
 
   return {
-    reply: `Chào bạn! Đối chiếu với **Cơ sở dữ liệu 10 nhóm rác thải chuẩn hóa (12.259 mẫu thực tế trong archive)**:\n\n` +
+    reply: `Chào bạn! Tôi là **EcoBot AI**, được tích hợp công nghệ **ChatGPT** và đối chiếu với **Bộ dữ liệu 10 nhóm rác thải chuẩn hóa (12.259 mẫu thực tế trong archive)**:\n\n` +
       `Về câu hỏi **"${userPrompt}"**:\n` +
-      '• Hệ thống EcoScan AI hỗ trợ phân loại 10 nhóm: `battery` (pin), `biological` (hữu cơ), `cardboard` (bìa carton), `clothes` (quần áo), `glass` (thủy tinh), `metal` (kim loại), `paper` (giấy), `plastic` (nhựa), `shoes` (giày dép), `trash` (rác tạp).\n' +
-      '• Bạn có thể chụp ảnh hoặc tải ảnh lên mục **Quét AI (/scan)** hoặc mở mục **Kho Dataset (/dataset)** để xem và đối chiếu các mẫu thực tế tương đồng.\n' +
-      '• Đừng quên kiểm tra mục **Bản Đồ Số (/map)** để tìm điểm thu gom chuyên biệt gần nhất nhé! 🌍✨',
+      `Khi bạn quét bất kỳ món đồ nào bằng camera, tôi sẽ lập tức giải đáp chuẩn 5 thông tin:\n` +
+      `1. **Đó là rác thải gì** (Tên cụ thể & chất liệu cấu tạo)\n` +
+      `2. **Chất thải loại gì** (Nhóm phân loại BVMT & màu thùng rác quy định)\n` +
+      `3. **Cần làm gì với nó** (Quy trình các bước xử lý, làm sạch và vứt bỏ)\n` +
+      `4. **Có thể tái chế được không** (Trạng thái, tỷ lệ % và điều kiện tái chế)\n` +
+      `5. **Tái chế được những gì?** (Danh sách các sản phẩm và nguyên liệu tái sinh thành phẩm)\n\n` +
+      `Hãy thử bấm vào nút quét hoặc hỏi tôi về một loại rác cụ thể nhé! 🌍✨`,
     suggestions: [
       'Pin cũ vứt ở đâu an toàn?',
-      'Quần áo cũ tái chế thế nào?',
-      'Phân biệt các loại nhựa #1 đến #7?',
-      'Cách ủ phân hữu cơ tại ban công'
+      'Chai nhựa PET tái chế thành gì?',
+      'Quần áo cũ có tái chế được không?',
+      'Cách phân loại rác tại nguồn'
     ]
   };
 }
@@ -180,6 +279,8 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
   const [marketplaceItems, setMarketplaceItems] = useState<MarketplaceItem[]>(INITIAL_MARKETPLACE);
   const [events, setEvents] = useState<GreenEvent[]>(INITIAL_EVENTS);
   const [geminiApiKey, setGeminiApiKeyState] = useState<string>('');
+  const [openaiApiKey, setOpenaiApiKeyState] = useState<string>('');
+  const [chatModel, setChatModelState] = useState<string>('gpt-4o-mini');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -214,10 +315,43 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
 
       const savedKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
       if (savedKey) setGeminiApiKeyState(savedKey);
+
+      const savedOpenAiKey = localStorage.getItem(STORAGE_KEYS.OPENAI_KEY);
+      if (savedOpenAiKey) setOpenaiApiKeyState(savedOpenAiKey);
+
+      const savedModel = localStorage.getItem(STORAGE_KEYS.CHAT_MODEL);
+      if (savedModel) setChatModelState(savedModel);
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
   }, []);
+
+  const setGeminiApiKey = (key: string) => {
+    setGeminiApiKeyState(key);
+    try {
+      localStorage.setItem(STORAGE_KEYS.API_KEY, key);
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const setOpenaiApiKey = (key: string) => {
+    setOpenaiApiKeyState(key);
+    try {
+      localStorage.setItem(STORAGE_KEYS.OPENAI_KEY, key);
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const setChatModel = (model: string) => {
+    setChatModelState(model);
+    try {
+      localStorage.setItem(STORAGE_KEYS.CHAT_MODEL, model);
+    } catch (e) {
+      console.warn(e);
+    }
+  };
 
   // Save changes to localStorage
   useEffect(() => {
@@ -304,13 +438,6 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
       console.warn(e);
     }
   }, [events, mounted]);
-
-  const setGeminiApiKey = (key: string) => {
-    setGeminiApiKeyState(key);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEYS.API_KEY, key);
-    }
-  };
 
   const login = (nameOrEmail: string) => {
     const existing = users.find(
@@ -526,15 +653,22 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
 
     setChatMessages((prev) => [...prev, userMsg]);
 
-    // Try calling server api /api/chat if available, or use smart bot engine
+    // Try calling server api /api/chat with ChatGPT (OpenAI) or Gemini or EcoBot
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(openaiApiKey ? { 'x-openai-key': openaiApiKey } : {}),
           ...(geminiApiKey ? { 'x-gemini-key': geminiApiKey } : {}),
         },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({
+          message: text,
+          openaiApiKey,
+          geminiApiKey,
+          model: chatModel,
+          scanItemAttachment,
+        }),
       });
 
       if (res.ok) {
@@ -545,7 +679,13 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
             sender: 'bot',
             text: data.reply,
             timestamp: 'Vừa xong',
-            suggestions: data.suggestions || ['Làm sao phân loại pin cũ?', 'Cách làm phân compost tại nhà?'],
+            suggestions: data.suggestions || [
+              'Tái chế thành những sản phẩm gì?',
+              'Làm sao phân loại pin cũ?',
+              'Cách làm phân compost tại nhà?'
+            ],
+            aiProvider: data.aiProvider || (openaiApiKey ? 'chatgpt' : 'ecobot'),
+            model: data.model || chatModel,
           };
           setChatMessages((prev) => [...prev, botMsg]);
           return;
@@ -555,15 +695,17 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
       console.warn('API /api/chat fallback:', err);
     }
 
-    // Smart fallback simulator
+    // Smart fallback simulator with the 5 core insights
     await new Promise((r) => setTimeout(r, 600));
-    const { reply, suggestions } = getBotResponse(text);
+    const { reply, suggestions } = getBotResponse(text, scanItemAttachment);
     const botMsg: ChatMessage = {
       id: `msg-${Date.now() + 1}`,
       sender: 'bot',
       text: reply,
       timestamp: 'Vừa xong',
       suggestions,
+      aiProvider: 'ecobot',
+      model: 'ChatGPT-Grounded EcoBot',
     };
     setChatMessages((prev) => [...prev, botMsg]);
   };
@@ -670,6 +812,10 @@ export function EcoStoreProvider({ children }: { children: React.ReactNode }) {
         events,
         geminiApiKey,
         setGeminiApiKey,
+        openaiApiKey,
+        setOpenaiApiKey,
+        chatModel,
+        setChatModel,
         login,
         logout,
         switchUser,

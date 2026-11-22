@@ -69,8 +69,11 @@ export default function EcoBotWidget() {
                 <h4 className="font-bold text-sm leading-tight flex items-center gap-1.5">
                   EcoBot AI
                   <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20 text-emerald-100 font-normal">
+                    ChatGPT
+                  </span>
                 </h4>
-                <p className="text-[10px] text-emerald-200">Trợ lý cố vấn sinh thái 24/7</p>
+                <p className="text-[10px] text-emerald-200">Trợ lý phân loại & tái chế rác 24/7</p>
               </div>
             </div>
 

@@ -65,15 +65,22 @@ export interface DatasetReferenceMatch {
 
 export interface ScanResult {
   id: string;
-  itemName: string;
+  itemName: string; // 1. Đó là rác thải gì
+  wasteName?: string; // Tên cụ thể mở rộng
   category: WasteCategory;
-  categoryNameVi: string;
+  categoryNameVi: string; // Tên danh mục tiếng Việt
+  wasteClassification?: string; // 2. Chất thải loại gì (theo chuẩn phân loại BVMT)
+  wasteBinColor?: string; // Màu thùng rác tương ứng (Vàng/Trắng: Tái chế, Xanh lá: Hữu cơ, Đỏ: Nguy hại, Cam/Xám: Rác còn lại)
   materialType: string;
   recyclability: RecyclabilityLevel;
+  canRecycle?: boolean; // 4. Có thể tái chế được không (true/false)
+  recyclabilityStatus?: string; // Mô tả trạng thái tái chế (e.g. "Có thể tái chế hoàn toàn (95 - 100%)")
+  recyclingProducts?: string[]; // 5. Tái chế được những gì? (Danh sách sản phẩm thành phẩm tái sinh)
+  actionGuide?: string[]; // 3. Cần làm gì với nó (các bước hành động xử lý cụ thể)
   ecoScore: number; // 0 to 100
   co2SavedKg: number;
   decompositionTime: string;
-  disposalGuide: string[];
+  disposalGuide: string[]; // Tương thích ngược với actionGuide
   upcyclingTips: string[];
   confidence: number;
   imageUrl: string;
@@ -136,6 +143,8 @@ export interface ChatMessage {
   suggestions?: string[];
   scanItemAttachment?: ScanResult;
   datasetContextReference?: string;
+  aiProvider?: 'chatgpt' | 'gemini' | 'ecobot';
+  model?: string;
 }
 
 // Digital Eco Map types
