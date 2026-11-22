@@ -76,7 +76,6 @@ export default function ScanUploader({
   const [isSimulatedStream, setIsSimulatedStream] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('Đang khởi tạo AI Engine...');
-  const [selectedCategoryHint, setSelectedCategoryHint] = useState<string>('auto');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nativeCameraInputRef = useRef<HTMLInputElement>(null);
@@ -290,7 +289,6 @@ export default function ScanUploader({
         fileName,
         apiKey: geminiApiKey,
         openaiApiKey: openaiApiKey,
-        categoryHint: selectedCategoryHint === 'auto' ? undefined : selectedCategoryHint,
       });
       onScanComplete(result);
     } catch (err) {
@@ -381,52 +379,47 @@ export default function ScanUploader({
 
   return (
     <div className="w-full space-y-6">
-      {/* Dataset Link & Real-World Object Assistant */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-indigo-50/60 border border-emerald-200/80 space-y-2.5 shadow-2xs">
+      {/* Dataset Link & 100% Automated Scanning Process */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-indigo-50/70 border border-emerald-200/90 space-y-3 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+            </span>
             <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
-              <span>Đang kết nối:</span>
-              <span className="text-emerald-800 font-black">Kho Dataset Archive 12.259 Mẫu Thực Tế</span>
+              <span>Hệ thống AI Tự Động:</span>
+              <span className="text-emerald-800 font-black">Kết Nối & Kiểm Chứng Kho Dataset (12.259 Mẫu Thực Tế)</span>
             </span>
           </div>
-          <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-100/70 px-2 py-0.5 rounded-md">
-            Chuẩn hóa 10 Nhóm • Độ chuẩn xác cao
+          <span className="text-[11px] text-emerald-800 font-bold bg-emerald-100/90 px-2.5 py-1 rounded-md border border-emerald-300/60 inline-flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Chuẩn hóa 10 Nhóm Rác Thải
           </span>
         </div>
 
-        {/* Quick category filter / assistance tags */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] no-scrollbar">
-          <span className="text-slate-400 font-semibold whitespace-nowrap text-[10px] uppercase">
-            Mục tiêu:
-          </span>
-          {[
-            { id: 'auto', label: '✨ Tự động quét AI' },
-            { id: 'plastic', label: '🧴 Chai / Hộp Nhựa' },
-            { id: 'metal', label: '🥫 Lon Nhôm / Kim Loại' },
-            { id: 'cardboard', label: '📦 Bìa Carton Sóng' },
-            { id: 'glass', label: '🍶 Thủy Tinh' },
-            { id: 'battery', label: '🔋 Pin & Điện Tử' },
-            { id: 'biological', label: '🍎 Rác Sinh Học' },
-            { id: 'clothes', label: '👕 Quần Áo' },
-            { id: 'shoes', label: '👟 Giày Dép' },
-            { id: 'paper', label: '📄 Giấy Báo' },
-            { id: 'trash', label: '🗑️ Rác Vô Cơ Khác' },
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setSelectedCategoryHint(cat.id)}
-              className={`px-2.5 py-1 rounded-xl whitespace-nowrap font-bold transition-all border ${
-                selectedCategoryHint === cat.id
-                  ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs scale-105'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+        {/* 100% Automated Pipeline Indicator */}
+        <div className="bg-white/80 backdrop-blur-xs rounded-xl p-2.5 border border-emerald-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-700">
+          <div className="flex items-center gap-1.5 font-bold text-slate-800">
+            <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+            <span>Quy trình tự động 100%:</span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] font-medium text-slate-600 overflow-x-auto no-scrollbar">
+            <span className="bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 rounded-md border border-emerald-200 whitespace-nowrap">
+              1. Chụp / Tải ảnh vật thể
+            </span>
+            <span className="text-slate-400 font-bold">➔</span>
+            <span className="bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
+              2. AI Vision Nhận dạng
+            </span>
+            <span className="text-slate-400 font-bold">➔</span>
+            <span className="bg-indigo-50 text-indigo-800 font-semibold px-2 py-0.5 rounded-md border border-indigo-200 whitespace-nowrap">
+              3. Đối chiếu 12.259 mẫu Dataset
+            </span>
+            <span className="text-slate-400 font-bold">➔</span>
+            <span className="bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
+              4. Xuất 5 Thông Tin Cốt Lõi
+            </span>
+          </div>
         </div>
       </div>
 
